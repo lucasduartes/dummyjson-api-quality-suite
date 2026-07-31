@@ -10,7 +10,26 @@ The dominant risks are broken authentication chains, incorrect product shapes, w
 
 In scope: `/test`; `/auth/login`, `/auth/me`, `/auth/refresh`; product list/read/add/update/delete; product search, category filtering, pagination, and field selection; and the specified negative inputs.
 
-Out of scope: users as a tested resource, carts, posts, recipes, comments, todos, quotes, IP utilities, sorting, artificial delay, cookies as the primary auth mechanism, token-expiry waiting, JWT signature validation, performance/load testing, penetration testing, broad fuzzing, persistence guarantees, CI configuration, and reporting infrastructure. Credentials may refer to a documented DummyJSON user, but no user-resource tests are added.
+Out of functional API test scope: users as a tested resource, carts, posts, recipes, comments, todos, quotes, IP utilities, sorting, artificial delay, cookies as the primary auth mechanism, token-expiry waiting, cryptographic JWT signature verification, performance/load testing, penetration testing, broad fuzzing, and persistence guarantees. CI configuration and reporting infrastructure are planned later as delivery and execution infrastructure; they are not functional API behaviors and are not implemented in this planning phase. Credentials may refer to a documented DummyJSON user, but no user-resource tests are added.
+
+## Collection organization
+
+- `00 - Health Check`
+- `01 - Authentication`
+  - `Positive`
+  - `Negative`
+- `02 - Products CRUD`
+  - `Read`
+  - `Create`
+  - `Update`
+  - `Delete`
+- `03 - Search Filtering and Pagination`
+  - `Search`
+  - `Categories`
+  - `Pagination`
+- `04 - Error Handling`
+
+Nested folders own or explicitly receive their prerequisites. Positive authentication creates runtime tokens; product Read discovers an existing ID; Categories discovers a valid slug. Focused Newman runs must provide those prerequisites or execute their owning setup request.
 
 ## Oracle hierarchy
 
@@ -22,13 +41,13 @@ If documentation is silent, the first implementation run records status, headers
 
 ## Authentication strategy
 
-- Supply username/password at runtime; never commit live tokens or private credentials.
+- The documented public DummyJSON fixture username/password may be committed in the example environment for reproducible assessment runs. Any private credential or secret must be supplied at runtime.
 - Valid login asserts a successful response, expected user identity relationship, and non-empty string access/refresh tokens. It stores tokens only in runtime scope.
 - `/auth/me` depends on valid login and sends `Authorization: Bearer {{accessToken}}` explicitly.
 - Refresh depends on valid login and uses the returned refresh token in JSON. It asserts usable replacement token strings, not token inequality, signature validity, or expiry timing.
 - Missing and malformed authentication explicitly override inherited authorization to prevent a false positive from a valid collection token.
 - Invalid/missing credential and invalid-refresh cases are independent characterization tests where exact negative status/body is undocumented.
-- JWTs may receive lightweight shape checks (three non-empty dot-separated segments), but no cryptographic verification and no claim about claims beyond documented response fields.
+- JWT structural checks may verify three non-empty segments, Base64URL-decode the header and payload, and verify both decoded values are valid JSON. When `iat` or `exp` is present, its type and temporal plausibility may be checked; when both are present, assert `exp > iat`. These are structural or characterization checks, not documented DummyJSON contract validation. The suite does not cryptographically verify the signature.
 
 ## Products strategy
 
@@ -63,25 +82,27 @@ Negative tests first prove that the request reached DummyJSON and returned parse
 ## Test data and variables
 
 - `baseUrl`: collection/environment value, defaulting to `https://dummyjson.com`.
-- `username`, `password`: runtime/environment inputs; assessment-safe public demo defaults may be considered later, but never tokens.
+- `username`, `password`: the documented public DummyJSON fixture values may be committed in the example environment; private alternatives are runtime-only.
 - `accessToken`, `refreshToken`: empty in committed files; runtime only.
 - `existingProductId`, `baselineProductTitle`, `validCategory`: derived during the run.
 - `nonexistentProductId`, `uniqueSuffix`, `searchHitTerm`, `searchMissTerm`: generated/derived per run.
 - Paging inputs (`pageSize`, `pageOneSkip`, `pageTwoSkip`) use small deterministic values.
 
-Prefer collection variables for non-secret defaults and local/runtime variables for transient data. Environment/current values must not be exported with secrets. Avoid global variables to prevent cross-collection contamination.
+Prefer collection variables for non-secret defaults and local/runtime variables for transient data. Access tokens, refresh tokens, private credentials, and secrets must be runtime-only and empty in committed files. Avoid global variables to prevent cross-collection contamination.
 
 ## Execution dependencies
 
 ```text
-Health
-  -> Login -> accessToken -> Current user
-           -> refreshToken -> Refresh
-  -> Product list -> existingProductId/baseline fields
-                  -> Read, PUT, PATCH, DELETE
-                  -> Search hit seed
-                  -> Pagination comparison
-  -> Category list -> validCategory -> Valid category
+00 - Health Check
+01 - Authentication/Positive: Login -> accessToken -> Current user
+                                    -> refreshToken -> Refresh
+01 - Authentication/Negative: independent invalid inputs
+02 - Products CRUD/Read: Product list -> existingProductId/baseline fields
+02 - Products CRUD/{Create,Update,Delete}: consume discovered ID where required
+03 - Search Filtering and Pagination/Search: consume search seed where required
+03 - Search Filtering and Pagination/Categories: Category list -> validCategory -> Valid category
+03 - Search Filtering and Pagination/Pagination: page one -> page two comparison
+04 - Error Handling: independent characterization inputs; existing ID only where required
 ```
 
 Negative tests should construct their own invalid inputs and not depend on positive tokens except where deliberately corrupting a known token. Folder-level setup must make focused Newman runs reproducible.

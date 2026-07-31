@@ -268,3 +268,289 @@ Remaining risks:
 - Negative status codes, error shapes, search matching semantics, invalid pagination coercion, unexpected-type handling, and unsupported-method behavior require live characterization during implementation.
 - DummyJSON is a mutable public dependency, so even contract-oriented tests need dynamic fixtures and relational assertions.
 - Git working-tree status remains unavailable under the current dubious-ownership restriction unless repository trust is configured by an authorized user.
+
+## 2026-07-31T10:10:07.7782507-03:00
+
+Complete user prompt:
+
+Review and patch only the four planning documents created in the previous step.
+
+Do not create the Postman collection, environment, package.json, CI workflow, or implementation files yet.
+
+Preserve the existing risk-based strategy and make the following consistency corrections.
+
+1. PLAN.md — collection structure
+
+Replace the proposed flat folder structure with the exact intended nested structure:
+
+- 00 - Health Check
+- 01 - Authentication
+  - Positive
+  - Negative
+- 02 - Products CRUD
+  - Read
+  - Create
+  - Update
+  - Delete
+- 03 - Search Filtering and Pagination
+  - Search
+  - Categories
+  - Pagination
+- 04 - Error Handling
+
+Update related dependency and folder-execution wording accordingly.
+
+2. PLAN.md and test-strategy.md — credentials
+
+Clarify that the documented public DummyJSON fixture credentials may be committed in the example environment for reproducibility.
+
+Access tokens, refresh tokens, private credentials, and secrets must remain runtime-only and empty in committed files.
+
+3. test-strategy.md — CI and reporting scope
+
+Remove CI configuration and reporting infrastructure from the overall out-of-scope list.
+
+Clarify that they are outside the functional API test scope but are planned later as delivery and execution infrastructure.
+
+4. test-strategy.md — JWT validation
+
+Allow the authentication suite to:
+
+- Verify that JWTs have three non-empty segments.
+- Base64URL-decode header and payload.
+- Verify that decoded values are valid JSON.
+- Check iat and exp when those claims are present.
+- Verify exp > iat when both are present.
+
+Explicitly classify claim checks as structural or characterization checks, not documented contract validation.
+
+Do not claim cryptographic signature verification.
+
+5. api-observations.md — projection documentation
+
+Change the documented projection fact from:
+
+"select accepts comma-separated or repeated fields"
+
+to:
+
+"select accepts comma-separated values"
+
+The official products documentation does not document repeated select parameters.
+
+6. test-matrix.md — normalize test IDs
+
+Use these exact IDs and meanings:
+
+HEALTH-001
+- API health check
+
+AUTH-001
+- Valid login
+
+AUTH-002
+- Current authenticated user
+
+AUTH-003
+- Refresh session
+
+AUTH-004
+- Invalid password or invalid credentials
+
+AUTH-005
+- Missing username
+
+AUTH-006
+- Missing password
+
+AUTH-007
+- Missing access token
+
+AUTH-008
+- Malformed bearer token
+
+AUTH-009
+- Invalid refresh token
+
+PROD-001
+- List products using limit=5 and skip=0 and store an existing ID
+
+PROD-002
+- Get existing product
+
+PROD-003
+- Get nonexistent product
+
+PROD-004
+- Simulated valid product creation
+
+PROD-005
+- Simulated minimal product creation
+
+PROD-006
+- Simulated PUT
+
+PROD-007
+- Simulated PATCH
+
+PROD-008
+- Simulated DELETE
+
+PROD-009
+- Update nonexistent product
+
+PROD-010
+- Delete nonexistent product
+
+QUERY-001
+- Search with results
+
+QUERY-002
+- Search without results
+
+QUERY-003
+- Get category list and store a valid slug
+
+QUERY-004
+- Filter using a valid category
+
+QUERY-005
+- Invalid category
+
+QUERY-006
+- First pagination page
+
+QUERY-007
+- Second pagination page with no overlap
+
+QUERY-008
+- Field selection
+
+QUERY-009
+- limit=0
+
+ERR-001
+- Non-numeric product ID
+
+ERR-002
+- Negative product ID
+
+ERR-003
+- Malformed JSON
+
+ERR-004
+- Unexpected product field types
+
+ERR-005
+- Empty create body
+
+ERR-006
+- Invalid pagination values
+
+ERR-007
+- Unsupported HTTP method selected only after observation
+
+Do not duplicate invalid-pagination coverage under both QUERY and ERROR.
+
+Classify PROD-009, PROD-010, and all ERR tests as characterization unless the official documentation explicitly defines the behavior.
+
+7. test-matrix.md — search classification
+
+For QUERY-001:
+
+- Treat the endpoint and response envelope as documented contract behavior.
+- Treat the exact matching fields and relevance relationship as observed characterization behavior.
+- Use classification "Contract + Characterization".
+
+For QUERY-002:
+
+- Treat the exact no-result array and metadata behavior as Characterization.
+- Do not represent an improbable search term as a guaranteed documented contract.
+
+8. test-matrix.md — product list request
+
+Describe PROD-001 using:
+
+GET /products?limit=5&skip=0
+
+Expected behavior must include:
+
+- products is an array
+- length is greater than zero and no greater than 5
+- skip equals 0
+- limit corresponds to 5
+- total is numeric and non-negative
+- no exact total is asserted
+
+9. test-matrix.md — unsupported method
+
+Remove suggestions to use HEAD or OPTIONS.
+
+State that the unsupported method must be selected after an exploratory observation because HTTP infrastructure may handle HEAD and OPTIONS specially.
+
+10. Final validation
+
+After editing:
+
+- Check that every P0 and P1 scenario has one unique matrix ID.
+- Check that no matrix ID is duplicated.
+- Check that PLAN.md, test-strategy.md, test-matrix.md, and api-observations.md describe the same folder structure, scope, naming, and oracle hierarchy.
+- Confirm that no behavior is labeled Observed because no live characterization has been executed yet.
+- Do not alter previously logged prompts.
+- Append this prompt and an accurate work summary to prompts.txt.
+
+Report only the files changed, consistency issues corrected, and validation performed.
+
+Summary of work performed:
+Work in progress: inspected the four planning documents and appended this prompt without altering previous log entries. Final edits and validation will be recorded in a completion addendum.
+
+Files changed:
+- prompts.txt (append only)
+
+Commands executed:
+- Ran PowerShell to obtain the machine timestamp and read the four planning documents.
+- Applied this append-only prompt entry.
+
+Validation performed:
+- Confirmed the current inconsistencies and established the pre-edit baseline.
+
+Assumptions:
+- Newly introduced edge scenarios without a supplied priority will retain risk-based P1 classification unless they directly split an existing P0 scenario.
+
+Remaining risks:
+- Document corrections and final cross-document validation are still in progress.
+
+Completion addendum:
+
+Summary of work performed:
+- Patched only PLAN.md, docs/test-strategy.md, docs/test-matrix.md, and docs/api-observations.md, plus this required append-only prompts.txt entry.
+- Replaced the flat collection layout with the exact nested structure and aligned dependency/folder-run wording.
+- Clarified public fixture credential handling, runtime-only sensitive values, later CI/reporting infrastructure, JWT structural checks, projection documentation, normalized matrix IDs, search oracles, product list assertions, and unsupported-method exploration.
+
+Files changed:
+- PLAN.md
+- docs/test-strategy.md
+- docs/test-matrix.md
+- docs/api-observations.md
+- prompts.txt (append only; previous entries unchanged)
+
+Commands executed:
+- Read the four planning documents and obtained the machine timestamp with PowerShell.
+- Applied scoped patches to the four planning documents.
+- Ran two PowerShell consistency validations covering matrix IDs/priorities, duplicated coverage, folder names, oracle labels, projection wording, unsupported-method wording, product-list request, and prohibited artifacts.
+- Applied this append-only completion addendum.
+
+Validation performed:
+- Confirmed all 36 required normalized IDs exist exactly once, with 25 P0 and 11 P1 rows and no duplicate, missing, or extra IDs.
+- Confirmed invalid pagination appears only once, as ERR-006.
+- Confirmed all four documents contain the same five top-level folder names and consistent documented/characterization oracle language.
+- Confirmed no behavior has a strict Observed label and no live characterization was executed.
+- Confirmed the projection wording is comma-separated values only, HEAD/OPTIONS are not suggested as methods, and PROD-001 uses the exact required request and relational assertions.
+- Confirmed no collection, environment, package.json, or CI artifact was created.
+- No Newman tests were run because implementation artifacts remain intentionally absent.
+
+Assumptions:
+- Newly introduced edge cases without user-supplied priorities are P1; splits of existing P0 cases retain P0.
+
+Remaining risks:
+- Characterization expectations remain intentionally open until live exploratory observations are authorized and recorded.

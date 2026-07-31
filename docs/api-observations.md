@@ -6,6 +6,16 @@ No live endpoint characterization requests were executed during this planning ph
 
 When implementation begins, append observations with date/time, request (with secrets removed), status, relevant headers, sanitized body shape, repeat count, and whether the behavior is safe to assert. Never overwrite earlier observations when the public API changes.
 
+## Collection organization and oracle hierarchy
+
+- `00 - Health Check`
+- `01 - Authentication`: `Positive`, `Negative`
+- `02 - Products CRUD`: `Read`, `Create`, `Update`, `Delete`
+- `03 - Search Filtering and Pagination`: `Search`, `Categories`, `Pagination`
+- `04 - Error Handling`
+
+The shared oracle hierarchy is documented contract, then dated observed characterization, with conventional expectations used only to design experiments. This file contains no live observations yet.
+
 ## Documented facts
 
 | Area | Documented fact | Testing consequence |
@@ -16,7 +26,7 @@ When implementation begins, append observations with date/time, request (with se
 | Refresh | `/auth/refresh` accepts a refresh token in JSON or cookie and returns tokens | Test JSON token flow; do not depend on cookies or wait for expiry |
 | Product list | Default response has a products envelope and default page of 30 | Assert envelope and bounded default page, not example catalog total |
 | Pagination | `limit` and `skip` paginate; `limit=0` returns all items | Use relational paging and total assertions |
-| Projection | `select` accepts comma-separated or repeated fields | Cover comma-separated form in P1 |
+| Projection | `select` accepts comma-separated values | Cover comma-separated form in P1 |
 | Search | `/products/search?q=...` searches products | Cover hit and miss; matching algorithm is a gap |
 | Category | Category list and category-product endpoints are documented | Discover a valid slug dynamically and assert category membership |
 | Create | `/products/add` simulates creation, returns a new ID, and does not add to the server | Assert response echo only; never chain a GET to the new ID as if persisted |
@@ -26,6 +36,8 @@ When implementation begins, append observations with date/time, request (with se
 | Newman | Newman runs exported collection JSON; environment uses `-e`; current docs require Node.js 16+ | Plan folder/full CLI runs and keep environment values safe |
 
 ## Contract gaps requiring characterization
+
+Characterization scenarios follow the collection organization defined consistently across the plan and strategy: authentication gaps live in `01 - Authentication/Negative`, CRUD edge cases in the relevant `02 - Products CRUD` child, query gaps in `03 - Search Filtering and Pagination`, and general malformed/unsupported cases in `04 - Error Handling`.
 
 | Gap | Planned experiment | Assertion policy before observation |
 |---|---|---|
@@ -39,7 +51,7 @@ When implementation begins, append observations with date/time, request (with se
 | Invalid pagination | Negative and nonnumeric limit/skip | Record rejection/coercion/defaulting separately |
 | Malformed JSON | Truncated JSON with JSON content type | Assert no successful creation; parser status/message open |
 | Unexpected types | Wrong-type title/price values | Record reject/coerce/echo behavior; avoid assuming validation |
-| Unsupported method | Probe one clearly unsupported product method chosen during implementation | Record status, Allow header, and body; do not assume 405 |
+| Unsupported method | Select a method only after exploratory observation; HTTP infrastructure may handle HEAD and OPTIONS specially | Record status, Allow header, and body; do not assume 405 |
 | PUT semantics | Send partial PUT payload | Only assert submitted modification; full replacement versus merge is unspecified |
 
 ## Observation template
@@ -53,7 +65,7 @@ When implementation begins, append observations with date/time, request (with se
 - Repetitions:
 - Status and relevant headers:
 - Sanitized response shape:
-- Classification: observed characterization
+- Classification (complete only after live execution):
 - Stability/brittleness assessment:
 - Proposed assertion (if any):
 ```

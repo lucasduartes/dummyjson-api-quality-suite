@@ -28,37 +28,43 @@ Build a reviewable Postman/Newman suite for the documented DummyJSON health, aut
 
 ## Proposed collection structure
 
-1. `00 Health`
-2. `10 Authentication / Positive`
-3. `11 Authentication / Negative`
-4. `20 Products / Read`
-5. `21 Products / CRUD Simulation`
-6. `22 Products / Search and Category`
-7. `23 Products / Pagination and Projection`
-8. `24 Products / Negative and Characterization`
+- `00 - Health Check`
+- `01 - Authentication`
+  - `Positive`
+  - `Negative`
+- `02 - Products CRUD`
+  - `Read`
+  - `Create`
+  - `Update`
+  - `Delete`
+- `03 - Search Filtering and Pagination`
+  - `Search`
+  - `Categories`
+  - `Pagination`
+- `04 - Error Handling`
 
-The numeric prefixes make dependency order explicit. Folder runs must either include their setup request or fail early with a clear missing-variable message.
+The numeric prefixes make top-level execution order explicit. A nested folder run must execute the setup request it owns or receive its documented prerequisites as inputs; otherwise it must fail early with a clear missing-variable message. `01 - Authentication/Positive` owns valid-token creation, `02 - Products CRUD/Read` owns existing-product discovery, and `03 - Search Filtering and Pagination/Categories` owns valid-category discovery. The complete collection runs top to bottom in the structure above.
 
 ## Delivery gates and implementation sequence
 
 1. Freeze traceability: review `docs/test-matrix.md`, resolve any assessment ambiguity, and record any live observations separately.
-2. Scaffold a schema-valid Postman v2.1 collection and a safe environment template with empty runtime token values.
-3. Add collection-level helpers and variables: base URL, credentials supplied at runtime, response parsing, structural checks, and cleanup of transient tokens.
-4. Implement and run `00 Health`; it separates connectivity/service outage from functional failures.
-5. Implement valid login, capture tokens, then current-user and refresh flows. Run the authentication positive folder.
-6. Implement authentication negatives independently so malformed or missing tokens cannot reuse a valid inherited header. Run the authentication folders.
-7. Implement product list and dynamic fixture discovery, then single-product reads. Run the product read folder.
+2. Scaffold a schema-valid Postman v2.1 collection and a safe example environment. The documented public DummyJSON fixture username/password may be committed for reproducibility. Access tokens, refresh tokens, private credentials, and secrets remain runtime-only and empty in committed files.
+3. Add collection-level helpers and variables: base URL, fixture credentials, response parsing, structural checks, and cleanup of transient tokens.
+4. Implement and run `00 - Health Check`; it separates connectivity/service outage from functional failures.
+5. Implement valid login, capture tokens, then current-user and refresh flows. Run `01 - Authentication/Positive`.
+6. Implement authentication negatives independently so malformed or missing tokens cannot reuse a valid inherited header. Run `01 - Authentication/Negative`, then its parent folder.
+7. Implement product list and dynamic fixture discovery, then single-product reads. Run `02 - Products CRUD/Read`.
 8. Implement simulated create, PUT, PATCH, and DELETE. Assert echoed changes and simulation metadata; verify non-persistence only against the original existing product, never against a generated create ID.
-9. Implement search, categories, pagination, field selection, and `limit=0` using relational assertions rather than fixed catalog values.
-10. Implement undocumented negative-input characterization cases. Baseline behavior must be recorded in `docs/api-observations.md` before pinning any observed status or error shape.
-11. Validate the collection against the Postman v2.1 schema, run each changed Newman folder, then run the complete collection. Review for secret leakage and false-positive patterns.
+9. Implement and run the `Search`, `Categories`, and `Pagination` children of `03 - Search Filtering and Pagination`, using relational assertions rather than fixed catalog values.
+10. Implement undocumented negative-input characterization cases in `04 - Error Handling`. Baseline behavior must be recorded in `docs/api-observations.md` before pinning any observed status or error shape.
+11. Validate the collection against the Postman v2.1 schema, run each changed nested folder, its affected parent folder, then the complete collection. Review for secret leakage and false-positive patterns.
 12. Add package/CI/reporting artifacts only in a later explicitly authorized phase.
 
 ## Completion criteria for the future implementation
 
 - Every matrix row maps to at least one request/test and is runnable.
 - All P0 folders and then the full suite pass against a documented or explicitly baselined expectation.
-- No access or refresh token is committed; runtime tokens start empty and are cleared or overwritten per run.
+- Documented public DummyJSON fixture credentials may be committed in the example environment; access tokens, refresh tokens, private credentials, and secrets are runtime-only, start empty in committed files, and are cleared or overwritten per run.
 - No assertion relies on the current global product total, a mutable product title, array order without an ordering contract, or undocumented exact status without an observation label.
 - Collection JSON validates against Postman Collection v2.1.0.
 - Newman output has zero request errors and zero assertion failures in the accepted baseline.
