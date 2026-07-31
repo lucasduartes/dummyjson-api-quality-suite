@@ -105,3 +105,166 @@ Final validation addendum:
 - Confirmed prompts.txt contains exactly two session prompt entries.
 - Confirmed CLAUDE.md still has the required prompt-logging text and a length of 294 characters.
 - Appended this validation result to the existing second entry without rewriting earlier log content.
+
+## 2026-07-31T09:49:08.2395501-03:00
+
+Complete user prompt:
+
+We are building a professional Postman API test suite for a QA Engineer technical assessment.
+
+Authoritative sources:
+
+- https://dummyjson.com/docs
+- https://dummyjson.com/docs/auth
+- https://dummyjson.com/docs/products
+- https://schema.postman.com/collection/json/v2.1.0/draft-07/docs/index.html
+- https://learning.postman.com/docs/reference/newman-cli/installing-running-newman
+
+Do not implement the Postman collection yet.
+
+Analyze the assessment and create:
+
+1. PLAN.md
+2. docs/test-strategy.md
+3. docs/test-matrix.md
+4. docs/api-observations.md
+
+The analysis must cover:
+
+- Explicit assessment requirements
+- Implicit evaluation criteria
+- Risk-based prioritization
+- Authentication strategy
+- Products CRUD strategy
+- Search, category filtering, and pagination strategy
+- Error-handling strategy
+- Contract tests versus characterization tests
+- Test data and variable strategy
+- Request execution dependencies
+- Risks of testing a mutable public API
+- Risks of false positives
+- Risks of brittle assertions
+- Simulated and non-persistent CRUD behavior
+- Features deliberately left out of scope
+- A realistic implementation sequence
+
+Use these priorities:
+
+P0:
+- Health check
+- Valid login
+- Current authenticated user
+- Refresh token
+- Invalid credentials
+- Missing authentication
+- Malformed authentication
+- List products
+- Read existing product
+- Read nonexistent product
+- Simulated create
+- PUT
+- PATCH
+- DELETE
+- Search with results
+- Search without results
+- Valid category
+- Invalid category
+- Two-page pagination comparison
+- Invalid product IDs
+- Malformed JSON
+- Unexpected field types
+
+P1:
+- Missing username
+- Missing password
+- Invalid refresh token
+- Minimal create payload
+- Field selection
+- limit=0
+- Invalid pagination parameters
+- Unsupported method
+
+Important decisions:
+
+- Do not assume created, updated, or deleted products persist.
+- Do not hardcode the current global product total.
+- Do not cryptographically verify JWT signatures.
+- Do not wait for tokens to expire.
+- Do not include users, carts, posts, or unrelated resources.
+- Do not implement load or security penetration testing.
+- Do not invent expected error status codes where the documentation is silent.
+
+For every test matrix entry include:
+
+- Test ID
+- Priority
+- Endpoint
+- Method
+- Scenario
+- Risk addressed
+- Preconditions
+- Expected result
+- Source of expectation: documented, observed, or conventional
+- Contract or characterization classification
+- Potential brittleness
+
+Do not create package.json, collection JSON, environment JSON, or CI files yet.
+
+Finish by explaining the implementation order you recommend.
+
+Summary of work performed:
+Work in progress: inspected repository rules and existing files, logged this prompt, and began source-backed assessment planning. Final work details will be appended after document creation and validation.
+
+Files changed:
+- prompts.txt (appended this entry)
+
+Commands executed:
+- Ran PowerShell to obtain the current ISO 8601 timestamp, list the repository, read AGENTS.md, and inspect the tail of prompts.txt.
+- Applied an append-only patch to prompts.txt.
+
+Validation performed:
+- Confirmed AGENTS.md governs the requested workflow and the repository currently contains only AGENTS.md, CLAUDE.md, prompts.txt, and .git.
+
+Assumptions:
+- The cited official pages are the only authoritative sources for documented behavior; live endpoint behavior, if inspected, will be labeled observed.
+
+Remaining risks:
+- Final source analysis, documents, and validation remain in progress.
+
+Completion addendum:
+
+Summary of work performed:
+- Reviewed only the five cited official DummyJSON/Postman sources.
+- Created PLAN.md, docs/test-strategy.md, docs/test-matrix.md, and docs/api-observations.md.
+- Covered explicit and implicit criteria, risk priorities, auth, simulated CRUD, discovery operations, error characterization, variable/dependency strategy, public-API risks, anti-flakiness practices, exclusions, and implementation order.
+- Kept undocumented exact error statuses open and made clear that no live behavior was observed in this planning phase.
+
+Files changed:
+- PLAN.md (created)
+- docs/test-strategy.md (created)
+- docs/test-matrix.md (created)
+- docs/api-observations.md (created)
+- prompts.txt (appended; prior entries preserved)
+
+Commands executed:
+- Opened/searched the five supplied official web documentation sources and inspected relevant sections.
+- Applied a patch creating the four requested Markdown documents.
+- Ran PowerShell validation of file presence/size/headings, matrix row and priority counts, required matrix columns, and prohibited-artifact absence.
+- Applied this append-only completion addendum.
+
+Validation performed:
+- Confirmed 30 matrix scenarios: 22 P0 and 8 P1.
+- Confirmed every matrix row uses the required eleven columns.
+- Confirmed package.json, collection JSON, environment JSON, and .github/CI artifacts were not created.
+- Confirmed all four requested documents exist and contain structured content.
+- Did not run Newman because the user explicitly prohibited collection implementation and no runnable collection exists.
+
+Assumptions:
+- The supplied P0 list contains 22 scenarios and P1 contains 8, for 30 matrix entries.
+- A known demo credential can later be supplied at runtime; committed runtime token values will remain empty.
+- `Observed` requires an actual endpoint call, so documentation examples were not relabeled as observations.
+
+Remaining risks:
+- Negative status codes, error shapes, search matching semantics, invalid pagination coercion, unexpected-type handling, and unsupported-method behavior require live characterization during implementation.
+- DummyJSON is a mutable public dependency, so even contract-oriented tests need dynamic fixtures and relational assertions.
+- Git working-tree status remains unavailable under the current dubious-ownership restriction unless repository trust is configured by an authorized user.
