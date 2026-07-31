@@ -1,0 +1,205 @@
+{
+  "info": {
+    "_postman_id": "45d249f1-f415-44dc-9649-0ead9032b2ad",
+    "name": "DummyJSON API Quality Suite",
+    "description": "Risk-based functional API quality suite for the documented DummyJSON health, authentication, and product capabilities. This foundation release implements only HEALTH-001; the remaining descriptive folders intentionally contain no placeholder requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - Health Check",
+      "description": "Connectivity and service-availability checks that run before dependent functional scenarios.",
+      "item": [
+        {
+          "name": "HEALTH-001 API is available",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/test",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "test"
+              ]
+            },
+            "description": "Verifies that the documented DummyJSON test route is reachable and returns its documented GET response."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Content-Type indicates JSON', function () {",
+                  "    const contentType = pm.response.headers.get('Content-Type') || '';",
+                  "    pm.expect(contentType.toLowerCase()).to.include('application/json');",
+                  "});",
+                  "",
+                  "let parsedBody;",
+                  "pm.test('Response body is valid JSON', function () {",
+                  "    pm.expect(function () {",
+                  "        parsedBody = pm.response.json();",
+                  "    }).not.to.throw();",
+                  "});",
+                  "",
+                  "pm.test('status equals ok', function () {",
+                  "    pm.expect(parsedBody).to.be.an('object');",
+                  "    pm.expect(parsedBody.status).to.eql('ok');",
+                  "});",
+                  "",
+                  "pm.test('method equals GET', function () {",
+                  "    pm.expect(parsedBody).to.be.an('object');",
+                  "    pm.expect(parsedBody.method).to.eql('GET');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Authentication",
+      "description": "Authentication contract and characterization coverage. Requests will be added in a later implementation phase.",
+      "item": [
+        {
+          "name": "Positive",
+          "description": "Successful login, current-user, and refresh-session workflows.",
+          "item": []
+        },
+        {
+          "name": "Negative",
+          "description": "Invalid, missing, and malformed authentication scenarios.",
+          "item": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Products CRUD",
+      "description": "Documented product reads and explicitly simulated, non-persistent write operations.",
+      "item": [
+        {
+          "name": "Read",
+          "description": "Product list, dynamic fixture discovery, and single-product retrieval.",
+          "item": []
+        },
+        {
+          "name": "Create",
+          "description": "Simulated product creation without persistence assumptions.",
+          "item": []
+        },
+        {
+          "name": "Update",
+          "description": "Simulated PUT and PATCH operations without persistence assumptions.",
+          "item": []
+        },
+        {
+          "name": "Delete",
+          "description": "Simulated deletion and deletion-metadata validation without persistence assumptions.",
+          "item": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Search Filtering and Pagination",
+      "description": "Product discovery and relational query behavior without fixed catalog totals or mutable fixtures.",
+      "item": [
+        {
+          "name": "Search",
+          "description": "Search response contracts and separately baselined matching characterization.",
+          "item": []
+        },
+        {
+          "name": "Categories",
+          "description": "Dynamic category discovery and category-filtered product checks.",
+          "item": []
+        },
+        {
+          "name": "Pagination",
+          "description": "Pagination, page comparison, field selection, and limit-zero behavior.",
+          "item": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Error Handling",
+      "description": "Undocumented malformed-input and unsupported-operation behavior, implemented only after exploratory characterization.",
+      "item": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "authenticatedUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "existingProductId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "runId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testProductTitle",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testProductPrice",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "validCategory",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pageOneIds",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pageLimit",
+      "value": "5",
+      "type": "string"
+    },
+    {
+      "key": "searchQuery",
+      "value": "phone",
+      "type": "string"
+    },
+    {
+      "key": "nonexistentProductId",
+      "value": "99999999",
+      "type": "string"
+    }
+  ]
+}

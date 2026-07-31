@@ -1,0 +1,18 @@
+{
+  "name": "dummyjson-api-quality-suite",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Postman and Newman API quality suite for DummyJSON.",
+  "scripts": {
+    "test": "newman run postman/DummyJSON-API-Quality-Suite.postman_collection.json -e postman/DummyJSON-Local.postman_environment.json",
+    "test:health": "newman run postman/DummyJSON-API-Quality-Suite.postman_collection.json -e postman/DummyJSON-Local.postman_environment.json --folder \"00 - Health Check\"",
+    "test:auth": "newman run postman/DummyJSON-API-Quality-Suite.postman_collection.json -e postman/DummyJSON-Local.postman_environment.json --folder \"01 - Authentication\"",
+    "test:products": "newman run postman/DummyJSON-API-Quality-Suite.postman_collection.json -e postman/DummyJSON-Local.postman_environment.json --folder \"02 - Products CRUD\"",
+    "test:query": "newman run postman/DummyJSON-API-Quality-Suite.postman_collection.json -e postman/DummyJSON-Local.postman_environment.json --folder \"03 - Search Filtering and Pagination\"",
+    "test:errors": "newman run postman/DummyJSON-API-Quality-Suite.postman_collection.json -e postman/DummyJSON-Local.postman_environment.json --folder \"04 - Error Handling\"",
+    "test:ci": "newman run postman/DummyJSON-API-Quality-Suite.postman_collection.json -e postman/DummyJSON-Local.postman_environment.json --reporters cli,junit --reporter-junit-export reports/newman-results.xml"
+  },
+  "devDependencies": {
+    "newman": "^6.2.1"
+  }
+}

@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Generated Newman and test reports
+reports/*
+!reports/.gitkeep
+newman/
+
+# Postman local and backup data
+.postman/
+*.postman_collection.local.json
+*.postman_environment.local.json
+*.postman_collection.json.bak
+*.postman_environment.json.bak
+
+# Editor and operating-system temporary files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
