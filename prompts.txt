@@ -1514,3 +1514,263 @@ Remaining risks:
 - ERR-006 does not independently prove how negative skip is handled because invalid limit short-circuits first.
 - ERR-007 uses documented fixture path /products/1 to isolate method routing; removal of that route or infrastructure-level response changes could make the characterization brittle.
 - One full-suite product-list request showed transient 5.2-second latency, classified as environmental instability risk; no functional assertions failed.
+
+
+Timestamp: 2026-07-31T11:16:30.5162006-03:00
+
+Complete user prompt:
+Perform a full senior-level engineering audit of the repository.
+
+Do not modify files initially.
+
+Review:
+
+1. Coverage against every assessment requirement
+2. Collection organization
+3. Naming and traceability
+4. Environment versus collection variable scope
+5. Runtime token safety
+6. Hidden execution-order dependencies
+7. Duplicate assertions
+8. False positives
+9. Tests that validate only status codes
+10. Brittle assertions against mutable public data
+11. Incorrect assumptions about simulated CRUD
+12. Contract versus characterization classification
+13. JWT structural validation correctness
+14. Negative cases with invented REST expectations
+15. JSON schema validity
+16. Newman compatibility
+17. npm script correctness
+18. Documentation consistency
+19. Prompt logging completeness
+20. Secrets or tokens committed to the repository
+21. Tests whose names do not match actual behavior
+22. Missing request descriptions
+23. Unnecessary abstractions
+24. Scope creep outside the assessment
+
+For every finding provide:
+
+- Severity
+- File or request
+- Problem
+- Risk
+- Minimal correction
+
+Then apply:
+
+- All critical fixes
+- All high-severity fixes
+- Medium fixes only when they clearly improve reliability or readability
+
+Do not add new API resources.
+
+After corrections:
+
+- Parse the collection and environment JSON.
+- Run every folder separately.
+- Run the complete suite.
+- Run git diff --check.
+- Search the repository for JWT-like token values.
+- Confirm runtime token initial values remain empty.
+- Confirm prompts.txt includes every prompt received.
+
+Report:
+
+- Total folders
+- Total requests
+- Total assertions
+- Passed assertions
+- Failed assertions
+- Execution time
+- Remaining limitations
+- Accepted trade-offs
+- Public API stability risks
+
+Summary of work performed:
+Work in progress: completed the required read-only audit phase before changing files. Inspected repository rules, package scripts, ignore rules, planning and strategy documents, matrix, observations, collection/environment structure, all request names/descriptions/assertion counts, variable reads/writes, key JWT and dependency scripts, prompt markers, Git state, and a preliminary JWT-like-value scan. Findings are being classified before corrective edits.
+
+Files changed:
+- prompts.txt (append only, after completion of the initial read-only audit)
+
+Commands executed:
+- Enumerated repository files and read all rules, source, configuration, and documentation files.
+- Parsed collection/environment JSON and produced structural, folder, request, assertion, description, and variable-scope inventories.
+- Inspected key authentication, CRUD, category, and pagination scripts.
+- Counted prompt markers and performed a preliminary JWT-pattern search outside dependencies.
+- Inspected Git status and machine timestamp.
+
+Validation performed:
+- Confirmed 14 total folders, 36 requests, 122 pm.test blocks, no request without tests, and no missing request descriptions.
+- Confirmed committed access and refresh token values are empty and the environment has no token keys.
+- Confirmed the preliminary JWT-like scan found no match outside excluded dependency/log files.
+
+Assumptions:
+- “Every folder separately” includes validation of the five top-level executable folders; nested child folders with documented owner-request prerequisites will also be assessed explicitly for standalone behavior.
+
+Remaining risks:
+- Documentation drift and prompt-log completeness still require correction/reconciliation.
+- Live execution and formal schema validation remain pending.
+
+
+Completion update — 2026-07-31T11:23:14.6171114-03:00
+
+Summary of work performed:
+Completed a senior engineering audit across coverage, structure, traceability, variable scope, token safety, execution dependencies, assertions, mutability, simulated CRUD, oracle classification, JWT decoding, negative expectations, schema/Newman/npm compatibility, documentation, prompt logging, secrets, naming, descriptions, abstraction, and scope. No critical or high implementation defect was found. Corrected high-impact documentation drift and selected medium consistency issues: current implementation/delivery status, actual variable names, dated observed oracles, ERR-007's selected method, and ERR-006's actual negative-pagination coverage. No API resource or collection behavior was added.
+
+Files changed:
+- PLAN.md
+- docs/test-strategy.md
+- docs/test-matrix.md
+- docs/api-observations.md
+- prompts.txt (append only)
+
+Commands executed:
+- Read and structurally audited all repository files outside dependencies/generated reports.
+- Parsed collection/environment JSON and inventoried folders, requests, IDs, assertions, descriptions, and variable reads/writes.
+- Inspected JWT, state-write, CRUD, category, and pagination scripts.
+- Downloaded the official Postman Collection v2.1 schema and its declared draft-04 metaschema; validated with the installed Ajv dependency.
+- Ran npm.cmd run test:health, test:auth, test:products, test:query, and test:errors separately.
+- Ran npm.cmd test and npm.cmd run test:ci.
+- Ran prompt reconciliation, JWT-like value scanning, token-initial-value checks, traceability checks, Git status, git diff --check, and diff statistics.
+
+Validation performed:
+- Official Postman v2.1 collection schema: valid, zero schema errors.
+- Collection and environment JSON parse successfully.
+- Traceability: 36 unique matrix IDs and 36 matching unique collection IDs; no missing or extra IDs.
+- Structure: 14 folders, 36 requests, 122 pm.test assertions, and no missing request descriptions.
+- Separate top-level folder results: Health 5/5, Authentication 35/35, Products 35/35, Query 33/33, Errors 14/14; zero failures.
+- Complete suite: 122/122 assertions passed, 36/36 requests passed, Newman duration 9.7 seconds (process wall time 11.348 seconds).
+- CI script: passed 122/122 and generated ignored reports/newman-results.xml.
+- No JWT-like values found outside dependencies; accessToken and refreshToken committed initial values are empty; environment has no token variables.
+- prompts.txt contains 11 complete prompt entries matching all 11 user prompts received through this audit.
+- git diff --check passed; only platform line-ending conversion warnings were emitted.
+
+Assumptions:
+- “Every folder separately” is fulfilled by the five supported top-level executable folders exposed through npm scripts. Nested child folders that consume an owner request are structural groupings rather than independently supported entry points.
+- Public fixture username/password are authorized reproducibility data, not private secrets.
+
+Remaining risks:
+- Nested Update/Delete and second-step category/pagination requests require their documented setup requests when selected below the top-level folder.
+- ERR-006 observes negative limit and skip together but cannot independently establish skip handling because limit validation short-circuits first.
+- Characterization assertions reflect single-date observations and may change with undocumented public API behavior.
+- Search/category/catalog mutation and cross-request pagination changes can cause transient failures.
+- The public fixture credentials, service availability, and latency remain external dependencies.
+
+Accepted trade-offs:
+- Retained duplicate guards inside state-writing tests because Postman continues later tests after a failure; revalidation prevents invalid runtime values from being saved.
+- Retained collection-scope transient state because dependent requests require it, while Newman does not persist runtime current values to committed files.
+- Did not add setup duplicates or hidden pm.sendRequest abstractions solely to make every nested child folder independently runnable.
+
+
+Timestamp: 2026-07-31T11:27:15.2634583-03:00
+
+Complete user prompt:
+Write a professional README.md based only on the implementation that currently exists.
+
+Do not document planned, missing, or unverified features.
+
+Include:
+
+1. Project title
+2. Assessment objective
+3. Technology stack
+4. Repository structure
+5. Risk-based test strategy
+6. Scope implemented
+7. Scope deliberately excluded
+8. Collection organization
+9. Environment variable strategy
+10. Collection variable strategy
+11. Authentication approach
+12. JWT structural validation approach
+13. Products CRUD simulation limitation
+14. Search and filtering approach
+15. Pagination approach
+16. Error-handling philosophy
+17. Contract versus characterization tests
+18. Installation
+19. Local execution
+20. Folder-specific execution
+21. Full Newman execution
+22. CI execution
+23. Importing the collection into Postman
+24. AI-assisted development workflow
+25. Human decisions and oversight
+26. Known limitations
+27. Trade-offs
+28. Potential future improvements
+
+The AI collaboration section must truthfully explain:
+
+- AI supported analysis, implementation, review, and debugging.
+- The human selected scope and priorities.
+- The human reviewed diffs and test results.
+- AI suggestions were not accepted blindly.
+- Failing assertions were investigated before being changed.
+- Undocumented behavior was classified rather than guessed.
+- prompts.txt contains the interaction trail.
+
+Include command examples for all npm scripts.
+
+Do not claim cryptographic JWT verification.
+
+Do not claim that DummyJSON persists CRUD mutations.
+
+Do not claim load, performance, or security penetration coverage.
+
+Use clear professional English.
+
+Summary of work performed:
+Work in progress: confirmed README.md does not exist and inspected the current package scripts, environment values, complete collection tree, collection variables, and Git state. README drafting and validation remain pending.
+
+Files changed:
+- prompts.txt (append only)
+
+Commands executed:
+- Checked for README.md.
+- Read package.json and the Postman environment.
+- Parsed and printed the collection tree and variables.
+- Inspected Git status and machine timestamp.
+
+Validation performed:
+- Confirmed the implemented suite has five top-level areas and all npm scripts requested for documentation.
+- Confirmed tokens are collection variables with empty committed values and are absent from the environment.
+
+Assumptions:
+- “CI execution” refers to the implemented test:ci Newman/JUnit npm script; no external CI-provider workflow will be claimed.
+
+Remaining risks:
+- README content still requires cross-checking against the current repository before completion.
+
+
+Completion update — 2026-07-31T11:28:55.0386523-03:00
+
+Summary of work performed:
+Created a professional README.md derived from the current implemented collection, environment, npm scripts, documentation, and verified audit state. Covered the assessment objective, stack, structure, risk strategy, implemented and excluded scope, collection/variable organization, authentication and structural JWT checks, simulated CRUD limitations, query behavior, oracle philosophy, installation and every npm command, Postman import, AI/human collaboration, limitations, trade-offs, and clearly labeled potential improvements.
+
+Files changed:
+- README.md (created)
+- prompts.txt (append only)
+
+Commands executed:
+- Checked for an existing README and inspected package.json, the environment, collection hierarchy, collection variables, Git state, and timestamp.
+- Ran a Node-based README heading, command-coverage, and prohibited-claim validation.
+- Searched README.md for planning, cryptographic, persistence, load, performance, and penetration language.
+- Ran git diff --check and inspected Git status.
+
+Validation performed:
+- Confirmed all seven npm scripts are documented with command examples.
+- Confirmed all requested README topics are represented in 27 focused headings/subheadings.
+- Confirmed the README does not claim cryptographic JWT verification, persistent DummyJSON mutations, or load/performance/security penetration coverage.
+- Confirmed future improvements are explicitly labeled as possible extensions rather than current capabilities.
+- Confirmed the CI section describes only the implemented test:ci/JUnit command and does not claim a provider workflow.
+- git diff --check passed with only existing platform line-ending warnings.
+
+Assumptions:
+- Human review language reflects the iterative assessment instructions requiring diff and test-result review and the human-selected scope and acceptance constraints.
+
+Remaining risks:
+- README accuracy depends on keeping it synchronized when collection requests, scripts, variables, or scope change.
+- Mutable-public-API limitations described in the README can evolve independently of the repository.

@@ -2,14 +2,14 @@
 
 ## Objective
 
-Build a reviewable Postman/Newman suite for the documented DummyJSON health, authentication, and product capabilities. This phase defines the approach only; it does not implement a collection, environment, package, CI workflow, or generated report.
+Maintain a reviewable Postman/Newman suite for the documented DummyJSON health, authentication, and product capabilities. The repository now implements the planned collection, environment, npm execution foundation, and JUnit-capable CI script; generated reports remain uncommitted.
 
 ## Assessment interpretation
 
 ### Explicit requirements
 
 - Cover every supplied P0 and P1 scenario at its assigned priority.
-- Use DummyJSON documentation as the API contract and Postman Collection v2.1.0 as the future collection format.
+- Use DummyJSON documentation as the API contract and Postman Collection v2.1.0 as the collection format.
 - Keep documented expectations distinct from observed or conventional expectations.
 - Treat undocumented edge behavior as characterization, without inventing status codes.
 - Model product POST, PUT, PATCH, and DELETE as simulations that do not persist.
@@ -26,7 +26,7 @@ Build a reviewable Postman/Newman suite for the documented DummyJSON health, aut
 - Honest handling of gaps in the published contract.
 - Evidence of incremental and full-suite validation.
 
-## Proposed collection structure
+## Collection structure
 
 - `00 - Health Check`
 - `01 - Authentication`
@@ -58,9 +58,9 @@ The numeric prefixes make top-level execution order explicit. A nested folder ru
 9. Implement and run the `Search`, `Categories`, and `Pagination` children of `03 - Search Filtering and Pagination`, using relational assertions rather than fixed catalog values.
 10. Implement undocumented negative-input characterization cases in `04 - Error Handling`. Baseline behavior must be recorded in `docs/api-observations.md` before pinning any observed status or error shape.
 11. Validate the collection against the Postman v2.1 schema, run each changed nested folder, its affected parent folder, then the complete collection. Review for secret leakage and false-positive patterns.
-12. Add package/CI/reporting artifacts only in a later explicitly authorized phase.
+12. Maintain the authorized npm/Newman execution and JUnit-reporting foundation without adding unrelated CI-provider workflows.
 
-## Completion criteria for the future implementation
+## Completion criteria
 
 - Every matrix row maps to at least one request/test and is runnable.
 - All P0 folders and then the full suite pass against a documented or explicitly baselined expectation.

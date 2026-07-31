@@ -2,7 +2,7 @@
 
 ## Status of observations
 
-The authentication negative cases below were observed through controlled live requests on 2026-07-31. Other contract gaps remain unobserved. Documentation examples are not treated as empirical evidence.
+Authentication, product CRUD, query, pagination, and error-handling gaps below were observed through controlled live requests on 2026-07-31. Documentation examples are not treated as empirical evidence, and every undocumented observation remains characterization behavior.
 
 When implementation begins, append observations with date/time, request (with secrets removed), status, relevant headers, sanitized body shape, repeat count, and whether the behavior is safe to assert. Never overwrite earlier observations when the public API changes.
 
@@ -32,7 +32,7 @@ The shared oracle hierarchy is documented contract, then dated observed characte
 | Create | `/products/add` simulates creation, returns a new ID, and does not add to the server | Assert response echo only; never chain a GET to the new ID as if persisted |
 | Update | PUT/PATCH simulate modification, return modified data, and do not update the server | Assert returned modification; do not expect a later GET to retain it |
 | Delete | DELETE simulates deletion, returns `isDeleted` and `deletedOn`, and does not delete on server | Assert deletion metadata; do not expect subsequent 404 |
-| Postman format | Official schema identifies Collection Format v2.1.0 and links its raw schema | Validate future collection JSON against v2.1.0 |
+| Postman format | Official schema identifies Collection Format v2.1.0 and links its raw schema | Validate the collection JSON against v2.1.0 |
 | Newman | Newman runs exported collection JSON; environment uses `-e`; current docs require Node.js 16+ | Plan folder/full CLI runs and keep environment values safe |
 
 ## Contract gaps requiring characterization

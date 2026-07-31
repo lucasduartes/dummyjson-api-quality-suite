@@ -2,7 +2,7 @@
 
 ## Purpose and quality risks
 
-The suite will provide fast evidence that DummyJSON is reachable and that its documented authentication and product workflows remain usable. Priority is based on user impact and dependency: authentication and basic reads are P0; simulated writes, core discovery, and error isolation are also P0 because they expose the most consequential integration failures. Useful options and secondary negative cases are P1.
+The suite provides fast evidence that DummyJSON is reachable and that its documented authentication and product workflows remain usable. Priority is based on user impact and dependency: authentication and basic reads are P0; simulated writes, core discovery, and error isolation are also P0 because they expose the most consequential integration failures. Useful options and secondary negative cases are P1.
 
 The dominant risks are broken authentication chains, incorrect product shapes, wrong filtering/paging behavior, false assumptions about simulated writes, and misleading green tests caused by weak assertions.
 
@@ -10,7 +10,7 @@ The dominant risks are broken authentication chains, incorrect product shapes, w
 
 In scope: `/test`; `/auth/login`, `/auth/me`, `/auth/refresh`; product list/read/add/update/delete; product search, category filtering, pagination, and field selection; and the specified negative inputs.
 
-Out of functional API test scope: users as a tested resource, carts, posts, recipes, comments, todos, quotes, IP utilities, sorting, artificial delay, cookies as the primary auth mechanism, token-expiry waiting, cryptographic JWT signature verification, performance/load testing, penetration testing, broad fuzzing, and persistence guarantees. CI configuration and reporting infrastructure are planned later as delivery and execution infrastructure; they are not functional API behaviors and are not implemented in this planning phase. Credentials may refer to a documented DummyJSON user, but no user-resource tests are added.
+Out of functional API test scope: users as a tested resource, carts, posts, recipes, comments, todos, quotes, IP utilities, sorting, artificial delay, cookies as the primary auth mechanism, token-expiry waiting, cryptographic JWT signature verification, performance/load testing, penetration testing, broad fuzzing, and persistence guarantees. The npm/Newman execution foundation and JUnit-capable reporting script are delivery infrastructure, not functional API behaviors; no CI-provider workflow is currently included. Credentials may refer to a documented DummyJSON user, but no user-resource tests are added.
 
 ## Collection organization
 
@@ -84,9 +84,10 @@ Negative tests first prove that the request reached DummyJSON and returned parse
 - `baseUrl`: collection/environment value, defaulting to `https://dummyjson.com`.
 - `username`, `password`: the documented public DummyJSON fixture values may be committed in the example environment; private alternatives are runtime-only.
 - `accessToken`, `refreshToken`: empty in committed files; runtime only.
-- `existingProductId`, `baselineProductTitle`, `validCategory`: derived during the run.
-- `nonexistentProductId`, `uniqueSuffix`, `searchHitTerm`, `searchMissTerm`: generated/derived per run.
-- Paging inputs (`pageSize`, `pageOneSkip`, `pageTwoSkip`) use small deterministic values.
+- `existingProductId`, `validCategory`, and `pageOneIds`: derived during the run.
+- `runId`, `testProductTitle`, and request-local unique search/category values: generated per run.
+- `nonexistentProductId` is a harmless configurable default used only by dated characterization tests.
+- `pageLimit` is a small deterministic collection default; page skips are expressed directly from it.
 
 Prefer collection variables for non-secret defaults and local/runtime variables for transient data. Access tokens, refresh tokens, private credentials, and secrets must be runtime-only and empty in committed files. Avoid global variables to prevent cross-collection contamination.
 
@@ -117,4 +118,4 @@ Brittleness risks include exact error text, full-response snapshots, fixed total
 
 ## Newman validation approach
 
-The future collection will use Postman Collection v2.1.0. Newman requires Node.js 16+ according to the cited installation page and runs exported collections with `newman run`; environments are supplied with `-e`. After each meaningful implementation change, run the affected folder, then run the complete collection before completion. Generated reports will remain uncommitted.
+The collection uses Postman Collection v2.1.0. Newman requires Node.js 16+ according to the cited installation page and runs exported collections with `newman run`; the environment is supplied with `-e`. After each meaningful implementation change, run the affected folder, then run the complete collection before completion. Generated reports remain uncommitted.
