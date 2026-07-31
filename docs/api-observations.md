@@ -2,7 +2,7 @@
 
 ## Status of observations
 
-No live endpoint characterization requests were executed during this planning phase. Therefore, this document contains documented facts and experiment candidates, but no behavior is labeled `Observed` yet. This prevents documentation examples from being mistaken for empirical evidence.
+The authentication negative cases below were observed through controlled live requests on 2026-07-31. Other contract gaps remain unobserved. Documentation examples are not treated as empirical evidence.
 
 When implementation begins, append observations with date/time, request (with secrets removed), status, relevant headers, sanitized body shape, repeat count, and whether the behavior is safe to assert. Never overwrite earlier observations when the public API changes.
 
@@ -14,7 +14,7 @@ When implementation begins, append observations with date/time, request (with se
 - `03 - Search Filtering and Pagination`: `Search`, `Categories`, `Pagination`
 - `04 - Error Handling`
 
-The shared oracle hierarchy is documented contract, then dated observed characterization, with conventional expectations used only to design experiments. This file contains no live observations yet.
+The shared oracle hierarchy is documented contract, then dated observed characterization, with conventional expectations used only to design experiments.
 
 ## Documented facts
 
@@ -69,6 +69,64 @@ Characterization scenarios follow the collection organization defined consistent
 - Stability/brittleness assessment:
 - Proposed assertion (if any):
 ```
+
+## Authentication observations
+
+All request values were controlled test fixtures. No access token or refresh token returned by the service was printed or recorded. Each result below is a single observation, so exact messages remain more brittle than status and error semantics.
+
+### OBS-2026-07-31-001 — AUTH-004 invalid password
+
+- Timestamp: `2026-07-31T13:28:31.866Z`
+- Request: `POST /auth/login`; documented username fixture plus a request-specific invalid password; JSON body.
+- Response status: `400`
+- Relevant response body: `{ "message": "Invalid credentials" }`
+- Documentation status: Negative status and error body are not specified by the official auth documentation.
+- Classification: Observed characterization.
+
+### OBS-2026-07-31-002 — AUTH-005 missing username
+
+- Timestamp: `2026-07-31T13:28:32.078Z`
+- Request: `POST /auth/login`; password field only; JSON body.
+- Response status: `400`
+- Relevant response body: `{ "message": "Username and password required" }`
+- Documentation status: Missing-field behavior is not specified by the official auth documentation.
+- Classification: Observed characterization.
+
+### OBS-2026-07-31-003 — AUTH-006 missing password
+
+- Timestamp: `2026-07-31T13:28:32.265Z`
+- Request: `POST /auth/login`; username field only; JSON body.
+- Response status: `400`
+- Relevant response body: `{ "message": "Username and password required" }`
+- Documentation status: Missing-field behavior is not specified by the official auth documentation.
+- Classification: Observed characterization.
+
+### OBS-2026-07-31-004 — AUTH-007 missing access token
+
+- Timestamp: `2026-07-31T13:28:32.455Z`
+- Request: `GET /auth/me`; Authorization header absent and authentication cookies absent/explicitly empty.
+- Response status: `401`
+- Relevant response body: `{ "message": "Access Token is required" }`
+- Documentation status: Bearer authentication is documented; the missing-token failure response is not.
+- Classification: Observed characterization.
+
+### OBS-2026-07-31-005 — AUTH-008 malformed bearer token
+
+- Timestamp: `2026-07-31T13:28:32.641Z`
+- Request: `GET /auth/me`; request-specific malformed Bearer value, redacted from this document.
+- Response status: `401`
+- Relevant response body: `{ "message": "Invalid/Expired Token!" }`
+- Documentation status: Bearer authentication is documented; malformed-token behavior is not.
+- Classification: Observed characterization.
+
+### OBS-2026-07-31-006 — AUTH-009 invalid refresh token
+
+- Timestamp: `2026-07-31T13:28:32.832Z`
+- Request: `POST /auth/refresh`; request-specific invalid refresh value, redacted; `expiresInMins: 30`.
+- Response status: `403`
+- Relevant response body: `{ "message": "Invalid refresh token" }`
+- Documentation status: Refresh-token exchange is documented; invalid-token behavior is not.
+- Classification: Observed characterization.
 
 ## Mutable-public-API risks
 

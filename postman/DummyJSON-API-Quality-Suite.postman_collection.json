@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "45d249f1-f415-44dc-9649-0ead9032b2ad",
     "name": "DummyJSON API Quality Suite",
-    "description": "Risk-based functional API quality suite for the documented DummyJSON health, authentication, and product capabilities. This foundation release implements only HEALTH-001; the remaining descriptive folders intentionally contain no placeholder requests.",
+    "description": "Risk-based functional API quality suite for the documented DummyJSON health, authentication, and product capabilities. This release implements health and authentication coverage; the remaining descriptive folders intentionally contain no placeholder requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -73,17 +73,311 @@
     },
     {
       "name": "01 - Authentication",
-      "description": "Authentication contract and characterization coverage. Requests will be added in a later implementation phase.",
+      "description": "Documented positive authentication flows followed by dated characterization coverage for undocumented negative behavior. Runtime tokens are collection variables and are never stored in the environment.",
       "item": [
         {
           "name": "Positive",
           "description": "Successful login, current-user, and refresh-session workflows.",
-          "item": []
+          "item": [
+            {
+              "name": "AUTH-001 Login succeeds with valid credentials",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json", "type": "text" },
+                  { "key": "Accept", "value": "application/json", "type": "text" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"expiresInMins\": 30\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+                "description": "Authenticates with the documented public fixture credentials, structurally validates returned JWTs without cryptographic signature verification, and stores validated session values at collection scope."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const decodeBase64 = require('atob');",
+                      "function decodeJwtPart(segment) {",
+                      "    const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');",
+                      "    const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);",
+                      "    const binary = decodeBase64(padded);",
+                      "    const encoded = Array.prototype.map.call(binary, function (character) {",
+                      "        return '%' + character.charCodeAt(0).toString(16).padStart(2, '0');",
+                      "    }).join('');",
+                      "    return JSON.parse(decodeURIComponent(encoded));",
+                      "}",
+                      "",
+                      "function inspectJwt(token) {",
+                      "    const result = { segmentsValid: false, decoded: false, header: null, payload: null };",
+                      "    if (typeof token !== 'string') return result;",
+                      "    const segments = token.split('.');",
+                      "    result.segmentsValid = segments.length === 3 && segments.every(function (segment) { return segment.length > 0; });",
+                      "    if (!result.segmentsValid) return result;",
+                      "    try {",
+                      "        result.header = decodeJwtPart(segments[0]);",
+                      "        result.payload = decodeJwtPart(segments[1]);",
+                      "        result.decoded = result.header !== null && typeof result.header === 'object' && result.payload !== null && typeof result.payload === 'object';",
+                      "    } catch (error) {",
+                      "        result.decodeError = error.message;",
+                      "    }",
+                      "    return result;",
+                      "}",
+                      "",
+                      "let loginBody;",
+                      "pm.test('Documented login succeeds with status 200', function () { pm.response.to.have.status(200); });",
+                      "pm.test('Login response Content-Type indicates JSON', function () {",
+                      "    pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json');",
+                      "});",
+                      "pm.test('Login response body is valid JSON', function () {",
+                      "    pm.expect(function () { loginBody = pm.response.json(); }).not.to.throw();",
+                      "});",
+                      "pm.test('Login identity fields satisfy the documented contract', function () {",
+                      "    pm.expect(loginBody.id).to.be.a('number').and.above(0);",
+                      "    pm.expect(loginBody.username).to.eql(pm.environment.get('username'));",
+                      "    pm.expect(loginBody.email).to.be.a('string').and.not.empty;",
+                      "});",
+                      "pm.test('Login returns non-empty access and refresh tokens', function () {",
+                      "    pm.expect(loginBody.accessToken).to.be.a('string').and.not.empty;",
+                      "    pm.expect(loginBody.refreshToken).to.be.a('string').and.not.empty;",
+                      "});",
+                      "",
+                      "const accessJwt = inspectJwt(loginBody && loginBody.accessToken);",
+                      "const refreshJwt = inspectJwt(loginBody && loginBody.refreshToken);",
+                      "pm.test('JWTs have exactly three non-empty segments', function () {",
+                      "    pm.expect(accessJwt.segmentsValid).to.be.true;",
+                      "    pm.expect(refreshJwt.segmentsValid).to.be.true;",
+                      "});",
+                      "pm.test('JWT header and payload are Base64URL-decodable JSON objects', function () {",
+                      "    pm.expect(accessJwt.decoded).to.be.true;",
+                      "    pm.expect(refreshJwt.decoded).to.be.true;",
+                      "});",
+                      "pm.test('JWT time claims are structurally coherent characterization checks', function () {",
+                      "    [accessJwt, refreshJwt].forEach(function (jwt) {",
+                      "        pm.expect(jwt.payload).to.have.property('iat').that.is.a('number');",
+                      "        pm.expect(jwt.payload).to.have.property('exp').that.is.a('number');",
+                      "        pm.expect(jwt.payload.exp).to.be.above(jwt.payload.iat);",
+                      "    });",
+                      "});",
+                      "pm.test('Validated login session is saved to collection variables', function () {",
+                      "    pm.expect(pm.response.code).to.eql(200);",
+                      "    pm.expect(loginBody.id).to.be.a('number').and.above(0);",
+                      "    pm.expect(loginBody.username).to.eql(pm.environment.get('username'));",
+                      "    pm.expect(loginBody.email).to.be.a('string').and.not.empty;",
+                      "    pm.expect(accessJwt.decoded && refreshJwt.decoded).to.be.true;",
+                      "    pm.expect(accessJwt.payload.exp).to.be.above(accessJwt.payload.iat);",
+                      "    pm.expect(refreshJwt.payload.exp).to.be.above(refreshJwt.payload.iat);",
+                      "    pm.collectionVariables.set('accessToken', loginBody.accessToken);",
+                      "    pm.collectionVariables.set('refreshToken', loginBody.refreshToken);",
+                      "    pm.collectionVariables.set('authenticatedUserId', String(loginBody.id));",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "AUTH-002 Current user matches authenticated identity",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+                "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] },
+                "description": "Uses the validated runtime access token and verifies that the documented current-user identity matches the login response."
+              },
+              "response": [],
+              "event": [{
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "let currentUserBody;",
+                    "pm.test('Documented current-user request succeeds with status 200', function () { pm.response.to.have.status(200); });",
+                    "pm.test('Current-user response is JSON', function () {",
+                    "    pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json');",
+                    "    pm.expect(function () { currentUserBody = pm.response.json(); }).not.to.throw();",
+                    "});",
+                    "pm.test('Current user matches the authenticated identity', function () {",
+                    "    const expectedId = Number(pm.collectionVariables.get('authenticatedUserId'));",
+                    "    pm.expect(expectedId).to.be.above(0);",
+                    "    pm.expect(currentUserBody.id).to.eql(expectedId);",
+                    "    pm.expect(currentUserBody.username).to.eql(pm.environment.get('username'));",
+                    "});",
+                    "pm.test('Current user required identity fields have correct types', function () {",
+                    "    pm.expect(currentUserBody.id).to.be.a('number').and.above(0);",
+                    "    ['username', 'email', 'firstName', 'lastName', 'gender', 'image'].forEach(function (field) {",
+                    "        pm.expect(currentUserBody[field], field).to.be.a('string').and.not.empty;",
+                    "    });",
+                    "});"
+                  ]
+                }
+              }]
+            },
+            {
+              "name": "AUTH-003 Refresh creates a new valid session token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json", "type": "text" },
+                  { "key": "Accept", "value": "application/json", "type": "text" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\",\n  \"expiresInMins\": 30\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] },
+                "description": "Exchanges the validated runtime refresh token for a refreshed session and replaces collection tokens only after all response checks pass."
+              },
+              "response": [],
+              "event": [{
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "function isThreePartJwt(token) {",
+                    "    return typeof token === 'string' && token.split('.').length === 3 && token.split('.').every(function (segment) { return segment.length > 0; });",
+                    "}",
+                    "let refreshBody;",
+                    "pm.test('Documented refresh succeeds with status 200', function () { pm.response.to.have.status(200); });",
+                    "pm.test('Refresh response is valid JSON', function () {",
+                    "    pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json');",
+                    "    pm.expect(function () { refreshBody = pm.response.json(); }).not.to.throw();",
+                    "});",
+                    "pm.test('Refresh returns non-empty three-part JWTs', function () {",
+                    "    pm.expect(refreshBody.accessToken).to.be.a('string').and.not.empty;",
+                    "    pm.expect(refreshBody.refreshToken).to.be.a('string').and.not.empty;",
+                    "    pm.expect(isThreePartJwt(refreshBody.accessToken)).to.be.true;",
+                    "    pm.expect(isThreePartJwt(refreshBody.refreshToken)).to.be.true;",
+                    "});",
+                    "pm.test('Validated refreshed tokens replace collection runtime values', function () {",
+                    "    pm.expect(pm.response.code).to.eql(200);",
+                    "    pm.expect(isThreePartJwt(refreshBody.accessToken)).to.be.true;",
+                    "    pm.expect(isThreePartJwt(refreshBody.refreshToken)).to.be.true;",
+                    "    pm.collectionVariables.set('accessToken', refreshBody.accessToken);",
+                    "    pm.collectionVariables.set('refreshToken', refreshBody.refreshToken);",
+                    "});"
+                  ]
+                }
+              }]
+            }
+          ]
         },
         {
           "name": "Negative",
           "description": "Invalid, missing, and malformed authentication scenarios.",
-          "item": []
+          "item": [
+            {
+              "name": "AUTH-004 Login rejects invalid password",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }, { "key": "Accept", "value": "application/json", "type": "text" }],
+                "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"invalid-password-auth-004\"\n}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+                "description": "Characterization based on OBS-2026-07-31-001. Uses a request-local invalid password and does not modify valid runtime tokens."
+              },
+              "response": [],
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "let errorBody;",
+                "pm.test('Characterization: invalid password returns observed status 400', function () { pm.response.to.have.status(400); });",
+                "pm.test('Characterization: invalid credentials response is JSON', function () { pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { errorBody = pm.response.json(); }).not.to.throw(); });",
+                "pm.test('Characterization: error semantics indicate invalid credentials', function () { pm.expect(errorBody.message).to.be.a('string').and.match(/invalid.*credentials/i); pm.expect(errorBody).not.to.have.any.keys('accessToken', 'refreshToken'); });"
+              ] } }]
+            },
+            {
+              "name": "AUTH-005 Login handles missing username",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }, { "key": "Accept", "value": "application/json", "type": "text" }],
+                "body": { "mode": "raw", "raw": "{\n  \"password\": \"{{password}}\"\n}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+                "description": "Characterization based on OBS-2026-07-31-002. Omits username independently and does not modify runtime tokens."
+              },
+              "response": [],
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "let errorBody;",
+                "pm.test('Characterization: missing username returns observed status 400', function () { pm.response.to.have.status(400); });",
+                "pm.test('Characterization: missing username response is JSON', function () { pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { errorBody = pm.response.json(); }).not.to.throw(); });",
+                "pm.test('Characterization: error semantics identify required credentials', function () { pm.expect(errorBody.message).to.be.a('string').and.match(/username/i).and.match(/password/i).and.match(/required/i); pm.expect(errorBody).not.to.have.any.keys('accessToken', 'refreshToken'); });"
+              ] } }]
+            },
+            {
+              "name": "AUTH-006 Login handles missing password",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }, { "key": "Accept", "value": "application/json", "type": "text" }],
+                "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{username}}\"\n}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+                "description": "Characterization based on OBS-2026-07-31-003. Omits password independently and does not modify runtime tokens."
+              },
+              "response": [],
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "let errorBody;",
+                "pm.test('Characterization: missing password returns observed status 400', function () { pm.response.to.have.status(400); });",
+                "pm.test('Characterization: missing password response is JSON', function () { pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { errorBody = pm.response.json(); }).not.to.throw(); });",
+                "pm.test('Characterization: error semantics identify required credentials', function () { pm.expect(errorBody.message).to.be.a('string').and.match(/username/i).and.match(/password/i).and.match(/required/i); pm.expect(errorBody).not.to.have.any.keys('accessToken', 'refreshToken'); });"
+              ] } }]
+            },
+            {
+              "name": "AUTH-007 Protected endpoint handles missing access token",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json", "type": "text" },
+                  { "key": "Cookie", "value": "accessToken=; refreshToken=", "type": "text", "description": "Explicitly overrides Newman cookie-jar auth so this request truly has no access token." }
+                ],
+                "auth": { "type": "noauth" },
+                "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] },
+                "description": "Characterization based on OBS-2026-07-31-004. Explicitly disables authorization so a valid collection token cannot leak into this request."
+              },
+              "response": [],
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "let errorBody;",
+                "pm.test('Characterization: missing access token returns observed status 401', function () { pm.response.to.have.status(401); });",
+                "pm.test('Characterization: missing-token response is JSON', function () { pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { errorBody = pm.response.json(); }).not.to.throw(); });",
+                "pm.test('Characterization: error semantics require an access token', function () { pm.expect(errorBody.message).to.be.a('string').and.match(/access.*token/i).and.match(/required/i); pm.expect(errorBody).not.to.have.property('id'); });"
+              ] } }]
+            },
+            {
+              "name": "AUTH-008 Protected endpoint handles malformed bearer token",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "malformed-auth-008", "type": "string" }] },
+                "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] },
+                "description": "Characterization based on OBS-2026-07-31-005. Uses a request-local malformed Bearer value and never reads or overwrites valid runtime tokens."
+              },
+              "response": [],
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "let errorBody;",
+                "pm.test('Characterization: malformed bearer token returns observed status 401', function () { pm.response.to.have.status(401); });",
+                "pm.test('Characterization: malformed-token response is JSON', function () { pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { errorBody = pm.response.json(); }).not.to.throw(); });",
+                "pm.test('Characterization: error semantics identify an invalid or expired token', function () { pm.expect(errorBody.message).to.be.a('string').and.match(/invalid|expired/i).and.match(/token/i); pm.expect(errorBody).not.to.have.property('id'); });"
+              ] } }]
+            },
+            {
+              "name": "AUTH-009 Refresh handles invalid refresh token",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }, { "key": "Accept", "value": "application/json", "type": "text" }],
+                "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"invalid-refresh-auth-009\",\n  \"expiresInMins\": 30\n}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] },
+                "description": "Characterization based on OBS-2026-07-31-006. Uses a request-local invalid refresh value and does not overwrite valid collection tokens."
+              },
+              "response": [],
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "let errorBody;",
+                "pm.test('Characterization: invalid refresh token returns observed status 403', function () { pm.response.to.have.status(403); });",
+                "pm.test('Characterization: invalid-refresh response is JSON', function () { pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { errorBody = pm.response.json(); }).not.to.throw(); });",
+                "pm.test('Characterization: error semantics identify an invalid refresh token', function () { pm.expect(errorBody.message).to.be.a('string').and.match(/invalid/i).and.match(/refresh/i).and.match(/token/i); pm.expect(errorBody).not.to.have.any.keys('accessToken', 'refreshToken'); });"
+              ] } }]
+            }
+          ]
         }
       ]
     },

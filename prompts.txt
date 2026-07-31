@@ -730,3 +730,189 @@ Remaining risks:
 - npm audit reports 17 transitive vulnerabilities (8 moderate, 8 high, 1 critical) in the Newman dependency tree; no forced or breaking dependency remediation was attempted.
 - The suite currently proves only live API availability; authentication, product, query, and error behavior remains unimplemented by design.
 - Tests depend on the availability and behavior of the mutable public DummyJSON service.
+
+## 2026-07-31T10:27:40.6982148-03:00
+
+Complete user prompt:
+
+Implement only the authentication scope defined in docs/test-matrix.md.
+
+Before modifying files:
+
+1. Inspect the collection, environment, PLAN.md, test strategy, and API observations.
+2. Use the official DummyJSON auth documentation.
+3. Execute controlled exploratory requests when expected negative behavior is undocumented.
+4. Record observations in docs/api-observations.md with:
+   - Timestamp
+   - Request
+   - Response status
+   - Relevant response body
+   - Documentation status
+   - Classification
+5. Do not expose real token values in documentation, logs, prompts.txt, or committed files.
+
+Implement these requests in this order:
+
+Positive:
+- AUTH-001 Login succeeds with valid credentials
+- AUTH-002 Current user matches authenticated identity
+- AUTH-003 Refresh creates a new valid session token
+
+Negative:
+- AUTH-004 Login rejects invalid password
+- AUTH-005 Login handles missing username
+- AUTH-006 Login handles missing password
+- AUTH-007 Protected endpoint handles missing access token
+- AUTH-008 Protected endpoint handles malformed bearer token
+- AUTH-009 Refresh handles invalid refresh token
+
+AUTH-001 requirements:
+
+POST {{baseUrl}}/auth/login
+
+Body:
+{
+  "username": "{{username}}",
+  "password": "{{password}}",
+  "expiresInMins": 30
+}
+
+Validate:
+
+- Documented success status.
+- JSON content type.
+- id is a positive number.
+- username equals the environment username.
+- email is a non-empty string.
+- accessToken is a non-empty string.
+- refreshToken is a non-empty string.
+- Both tokens contain exactly three JWT segments.
+- JWT header and payload can be Base64URL decoded.
+- JWT header and payload are valid JSON.
+- Claims iat and exp exist when returned.
+- exp is greater than iat when both are present.
+- Do not claim that the signature was cryptographically verified.
+- Save accessToken, refreshToken, and authenticatedUserId as collection variables.
+
+AUTH-002 requirements:
+
+GET {{baseUrl}}/auth/me
+
+Authorization:
+Bearer {{accessToken}}
+
+Validate:
+
+- Documented success status.
+- Returned id equals authenticatedUserId.
+- Returned username equals the environment username.
+- Required identity fields have correct types.
+
+AUTH-003 requirements:
+
+POST {{baseUrl}}/auth/refresh
+
+Body:
+{
+  "refreshToken": "{{refreshToken}}",
+  "expiresInMins": 30
+}
+
+Validate:
+
+- Documented success status.
+- New access token and refresh token are returned.
+- Tokens have valid three-part JWT structure.
+- Update collection variables only after successful validation.
+
+Negative test requirements:
+
+- Do not overwrite valid runtime tokens.
+- Use request-specific invalid values.
+- Do not infer status codes solely from REST conventions.
+- First observe undocumented behavior.
+- Name undocumented assertions as characterization behavior.
+- Validate both status and error response semantics where possible.
+- Ensure each negative request can execute independently of other negative requests.
+- Do not log complete tokens.
+
+Run:
+
+- npm run test:auth
+- npm test
+
+Review the diff for:
+
+- Hidden ordering dependencies
+- False positives
+- Token leakage
+- Hardcoded response data
+- Weak assertions
+- Brittle expiration checks
+
+Finish with a precise implementation and validation report.
+
+Summary of work performed:
+Work in progress: inspected the collection, environment, PLAN.md, test strategy, API observations, and repository status before modifying implementation files; appended this prompt without token values. Official documentation review, controlled observations, implementation, and validation remain pending.
+
+Files changed:
+- prompts.txt (append only)
+
+Commands executed:
+- Ran PowerShell to obtain the timestamp, read all required repository artifacts, and inspect Git status.
+- Applied this append-only prompt entry.
+
+Validation performed:
+- Confirmed tokens are currently empty collection variables and absent from the environment.
+
+Assumptions:
+- Placeholder syntax in this prompt is not a real token and is safe to log.
+
+Remaining risks:
+- Live negative behavior has not yet been characterized in this turn.
+
+Completion addendum:
+
+Summary of work performed:
+- Reviewed the official DummyJSON auth documentation and implemented exactly AUTH-001 through AUTH-009 in the existing Positive and Negative folders.
+- Added documented positive-flow assertions, structural JWT decoding/JSON/claim checks without signature verification, safe collection-variable updates, and identity correlation.
+- Executed six controlled negative probes with sanitized output and recorded dated observations in docs/api-observations.md.
+- Implemented observed negative statuses and semantic error assertions labeled as characterization behavior.
+- Diagnosed and fixed a hidden Newman cookie-jar dependency for AUTH-007 by explicitly overriding authentication cookies.
+
+Files changed:
+- postman/DummyJSON-API-Quality-Suite.postman_collection.json
+- docs/api-observations.md
+- prompts.txt (append only; prior entries preserved)
+
+Commands executed:
+- Inspected the required repository artifacts and Git status.
+- Opened the official DummyJSON auth documentation.
+- Ran one sanitized exploratory request for each AUTH-004 through AUTH-009 case; output included no real tokens.
+- Parsed and structurally inspected the collection/environment JSON with Node.js.
+- Ran `npm.cmd run test:auth` twice: the first run exposed the cookie-jar dependency; the corrected run passed.
+- Ran the Negative subfolder independently with local Newman.
+- Ran `npm.cmd test`.
+- Ran token-leak, token-mutation, ordering, JSON, assertion-count, Git diff, and whitespace checks.
+
+Validation performed:
+- Authentication folder: 9 requests, 35 named assertions, 0 failures on the final run.
+- Isolated Negative folder: 6 requests, 18 assertions, 0 failures.
+- Full suite: 10 requests, 40 assertions, 0 failures.
+- Confirmed AUTH-001 through AUTH-009 appear once and in the required order.
+- Confirmed negative scripts never set accessToken or refreshToken.
+- Confirmed committed token defaults remain empty and the environment has no token variables.
+- Confirmed no JWT-like token value appears in the collection, environment, observations, or prompts.txt.
+- Confirmed positive identity assertions use runtime/environment correlation rather than hardcoded response identity data.
+- Confirmed expiration checks assert numeric iat/exp and `exp > iat` only; they do not wait, compare exact timestamps, or verify signatures.
+- Reviewed the Git diff; only the collection, API observations, and append-only prompt log changed.
+
+Assumptions:
+- Successful documented auth operations return HTTP 200, as confirmed by the live implementation runs.
+- Exact negative statuses are single-run observed characterization baselines, while message assertions intentionally match semantics rather than complete strings.
+- Positive requests intentionally execute in order because AUTH-002 and AUTH-003 consume session values validated by AUTH-001.
+
+Remaining risks:
+- DummyJSON is public and mutable; undocumented negative statuses or messages may change.
+- The public fixture credentials or returned identity schema may change.
+- Authentication cookies are a second service auth channel; AUTH-007 explicitly neutralizes them, but future collection-level cookie behavior should remain under review.
