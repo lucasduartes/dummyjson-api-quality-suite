@@ -128,6 +128,158 @@ All request values were controlled test fixtures. No access token or refresh tok
 - Documentation status: Refresh-token exchange is documented; invalid-token behavior is not.
 - Classification: Observed characterization.
 
+## Product CRUD observations
+
+The existing product ID below was selected dynamically from a one-item list response. These requests confirm response behavior only; no simulated mutation was treated as persistent.
+
+### OBS-2026-07-31-007 — PROD-003 nonexistent product read
+
+- Timestamp: `2026-07-31T13:52:17.055Z`
+- Request: `GET /products/99999999`.
+- Response status: `404`
+- Relevant response body: `{ "message": "Product with id '99999999' not found" }`
+- Documentation status: Single-product reads are documented; nonexistent-ID behavior is not.
+- Classification: Observed characterization.
+
+### OBS-2026-07-31-008 — PROD-004 simulated full create
+
+- Timestamp: `2026-07-31T13:52:17.242Z`
+- Request: `POST /products/add`; controlled title, numeric price, description, and category.
+- Response status: `201`
+- Relevant response body: positive generated `id` plus all submitted fields with matching values.
+- Documentation status: Simulated, non-persistent creation and returned ID/fields are documented; the numeric status is observed.
+- Classification: Documented contract plus observed status.
+
+### OBS-2026-07-31-009 — PROD-005 simulated minimal create
+
+- Timestamp: `2026-07-31T13:52:17.976Z`
+- Request: `POST /products/add`; title-only JSON body.
+- Response status: `201`
+- Relevant response body: positive generated `id` and matching submitted title.
+- Documentation status: The official create example supplies a title while omitting other product data from the example; persistence is explicitly excluded. Numeric status is observed.
+- Classification: Documented example contract plus observed status.
+
+### OBS-2026-07-31-010 — PROD-006 simulated PUT
+
+- Timestamp: `2026-07-31T13:52:18.695Z`
+- Request: `PUT /products/{dynamically-selected-existing-id}`; controlled title, price, description, and category.
+- Response status: `200`
+- Relevant response body: original positive `id` plus all submitted modifications with matching values.
+- Documentation status: Simulated, non-persistent PUT and returned modified data are documented; numeric status is observed.
+- Classification: Documented contract plus observed status.
+
+### OBS-2026-07-31-011 — PROD-007 simulated PATCH
+
+- Timestamp: `2026-07-31T13:52:18.880Z`
+- Request: `PATCH /products/{dynamically-selected-existing-id}`; controlled title only.
+- Response status: `200`
+- Relevant response body: original positive `id`, matching submitted title, and other original product fields.
+- Documentation status: Simulated, non-persistent PATCH and returned modified data are documented; numeric status is observed.
+- Classification: Documented contract plus observed status.
+
+### OBS-2026-07-31-012 — PROD-009 update nonexistent product
+
+- Timestamp: `2026-07-31T13:52:19.067Z`
+- Request: `PUT /products/99999999`; controlled title.
+- Response status: `404`
+- Relevant response body: `{ "message": "Product with id '99999999' not found" }`
+- Documentation status: Update simulation is documented only for existing products; nonexistent-ID behavior is not.
+- Classification: Observed characterization.
+
+### OBS-2026-07-31-013 — PROD-008 simulated delete
+
+- Timestamp: `2026-07-31T13:52:19.255Z`
+- Request: `DELETE /products/{dynamically-selected-existing-id}`.
+- Response status: `200`
+- Relevant response body: matching `id`, `isDeleted: true`, and a parseable ISO `deletedOn` string.
+- Documentation status: Simulated non-persistent deletion, `isDeleted`, and `deletedOn` are documented; numeric status is observed.
+- Classification: Documented contract plus observed status.
+
+### OBS-2026-07-31-014 — PROD-010 delete nonexistent product
+
+- Timestamp: `2026-07-31T13:52:19.441Z`
+- Request: `DELETE /products/99999999`.
+- Response status: `404`
+- Relevant response body: `{ "message": "Product with id '99999999' not found" }`
+- Documentation status: Delete simulation is documented only for existing products; nonexistent-ID behavior is not.
+- Classification: Observed characterization.
+
+## Search, category, and pagination observations
+
+All catalog-dependent values below are described relationally. Exact counts, IDs, category slugs, and product values are intentionally not adopted as assertions.
+
+### OBS-2026-07-31-015 — QUERY-001 search matching
+
+- Timestamp: `2026-07-31T14:01:59.261Z`
+- Request: `GET /products/search?q=phone`.
+- Response status: `200`
+- Relevant response body: non-empty `products` array with numeric metadata; sampled matches contained the query in one or more of `title`, `description`, or `tags`.
+- Documentation status: The search endpoint and envelope are documented; exact searchable fields and relevance semantics are not.
+- Classification: Documented contract plus observed characterization of matching fields.
+
+### OBS-2026-07-31-016 — QUERY-002 unique no-result search
+
+- Timestamp: `2026-07-31T14:01:59.447Z`
+- Request: `GET /products/search?q={unique-run-specific-unlikely-query}`.
+- Response status: `200`
+- Relevant response body: `{ "products": [], "total": 0, "skip": 0, "limit": 0 }`
+- Documentation status: Search is documented; the exact no-result envelope is not.
+- Classification: Observed characterization.
+
+### OBS-2026-07-31-017 — QUERY-003 category list
+
+- Timestamp: `2026-07-31T14:01:59.651Z`
+- Request: `GET /products/category-list`.
+- Response status: `200`
+- Relevant response body: non-empty array in which every entry was a non-empty string; the first slug was selected dynamically.
+- Documentation status: The category-list endpoint and string-array response are documented; numeric status is observed.
+- Classification: Documented contract plus observed status.
+
+### OBS-2026-07-31-018 — QUERY-004 valid category filter
+
+- Timestamp: `2026-07-31T14:01:59.840Z`
+- Request: `GET /products/category/{dynamically-selected-slug}`.
+- Response status: `200`
+- Relevant response body: non-empty products envelope; all returned product categories matched the requested slug and pagination metadata was coherent.
+- Documentation status: Category filtering and its envelope are documented; numeric status is observed.
+- Classification: Documented contract plus observed status.
+
+### OBS-2026-07-31-019 — QUERY-005 nonexistent category
+
+- Timestamp: `2026-07-31T14:02:00.023Z`
+- Request: `GET /products/category/{unique-run-specific-nonexistent-slug}`.
+- Response status: `200`
+- Relevant response body: `{ "products": [], "total": 0, "skip": 0, "limit": 0 }`
+- Documentation status: Valid category filtering is documented; nonexistent-category semantics are not.
+- Classification: Observed characterization.
+
+### OBS-2026-07-31-020 — QUERY-006 and QUERY-007 adjacent pages
+
+- Timestamp: `2026-07-31T14:02:00.212Z` and `2026-07-31T14:02:00.399Z`
+- Request: adjacent `GET /products` pages using the configured positive limit and `skip=0` then `skip={limit}`.
+- Response status: `200` for both requests.
+- Relevant response body: each page respected requested `skip` and `limit`, IDs were unique within each page, and no ID overlapped across the two observed pages.
+- Documentation status: `limit` and `skip` pagination are documented; no-overlap is a relational expectation for the observed stable snapshot, not a documented ordering guarantee.
+- Classification: Documented pagination contract plus observed page relationship.
+
+### OBS-2026-07-31-021 — QUERY-008 field selection
+
+- Timestamp: `2026-07-31T14:02:00.583Z`
+- Request: `GET /products?limit=5&select=title,price`.
+- Response status: `200`
+- Relevant response body: every product object contained exactly `id`, `title`, and `price`; envelope metadata remained outside product objects.
+- Documentation status: Comma-separated field selection is documented; inclusion of `id` is shown by the documentation example and confirmed by observation.
+- Classification: Documented contract plus observed response shape.
+
+### OBS-2026-07-31-022 — QUERY-009 limit zero
+
+- Timestamp: `2026-07-31T14:02:00.959Z`
+- Request: `GET /products?limit=0`.
+- Response status: `200`
+- Relevant response body: `products.length` equaled response `total`, `skip` was zero, and response `limit` represented the returned item count rather than remaining zero.
+- Documentation status: `limit=0` returning all items is documented; returned metadata normalization is observed.
+- Classification: Documented contract plus observed metadata behavior.
+
 ## Mutable-public-API risks
 
 - Product totals, IDs, fields, titles, categories, and search matches can change.

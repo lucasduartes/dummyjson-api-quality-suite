@@ -414,22 +414,235 @@
         {
           "name": "Read",
           "description": "Product list, dynamic fixture discovery, and single-product retrieval.",
-          "item": []
+          "item": [
+            {
+              "name": "PROD-001 List products and store an existing product ID",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products?limit=5&skip=0", "host": ["{{baseUrl}}"], "path": ["products"], "query": [{ "key": "limit", "value": "5" }, { "key": "skip", "value": "0" }] },
+                "description": "Retrieves a bounded documented page and stores the first returned positive ID for existing-resource tests. It makes no assertion about the mutable global catalog total or product ordering."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.unset('existingProductId');"] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let listBody;",
+                  "const requestedLimit = 5;",
+                  "pm.test('Product list succeeds with status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Product list response is valid JSON', function () { pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { listBody = pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Product list contains a bounded non-empty products array', function () { pm.expect(listBody.products).to.be.an('array'); pm.expect(listBody.products.length).to.be.above(0).and.at.most(requestedLimit); });",
+                  "pm.test('Product list pagination metadata matches the request without fixing total', function () { pm.expect(listBody.total).to.be.a('number').and.at.least(0); pm.expect(listBody.skip).to.eql(0); pm.expect(listBody.limit).to.eql(requestedLimit); });",
+                  "pm.test('Every returned product has a positive numeric ID', function () { listBody.products.forEach(function (product) { pm.expect(product.id).to.be.a('number').and.above(0); }); });",
+                  "pm.test('Validated first product ID is stored for existing-resource tests', function () { pm.expect(pm.response.code).to.eql(200); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(listBody.products).to.be.an('array').that.is.not.empty; pm.expect(listBody.products.length).to.be.at.most(requestedLimit); pm.expect(listBody.total).to.be.a('number').and.at.least(0); pm.expect(listBody.skip).to.eql(0); pm.expect(listBody.limit).to.eql(requestedLimit); listBody.products.forEach(function (product) { pm.expect(product.id).to.be.a('number').and.above(0); }); pm.collectionVariables.set('existingProductId', String(listBody.products[0].id)); });"
+                ] } }
+              ]
+            },
+            {
+              "name": "PROD-002 Get existing product by ID",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products/{{existingProductId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{existingProductId}}"] },
+                "description": "Retrieves the runtime-discovered existing product and validates identity and field types without hardcoding mutable product content."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["if (!pm.collectionVariables.get('existingProductId')) { throw new Error('PROD-001 must provide existingProductId before PROD-002'); }"] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let productBody;",
+                  "pm.test('Existing product request succeeds with status 200 and JSON', function () { pm.response.to.have.status(200); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { productBody = pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Returned product ID matches the runtime-discovered ID', function () { pm.expect(productBody.id).to.eql(Number(pm.collectionVariables.get('existingProductId'))); });",
+                  "pm.test('Present core product fields have appropriate types', function () { const expectedTypes = { title: 'string', category: 'string', description: 'string', price: 'number' }; Object.keys(expectedTypes).forEach(function (field) { if (Object.prototype.hasOwnProperty.call(productBody, field)) { pm.expect(productBody[field], field).to.be.a(expectedTypes[field]); } }); });"
+                ] } }
+              ]
+            },
+            {
+              "name": "PROD-003 Get nonexistent product by ID",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products/{{nonexistentProductId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{nonexistentProductId}}"] },
+                "description": "Observed characterization from OBS-2026-07-31-007 for a configured nonexistent product ID; the official documentation does not define this error response."
+              },
+              "response": [],
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "let errorBody;",
+                "pm.test('Characterization: nonexistent product read returns observed status 404', function () { pm.response.to.have.status(404); });",
+                "pm.test('Characterization: nonexistent product response is JSON', function () { pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { errorBody = pm.response.json(); }).not.to.throw(); });",
+                "pm.test('Characterization: error semantics identify the requested product as not found', function () { pm.expect(errorBody.message).to.be.a('string').and.match(/product/i).and.match(/not found/i); pm.expect(errorBody.message).to.include(pm.collectionVariables.get('nonexistentProductId')); pm.expect(errorBody).not.to.have.property('id'); });"
+              ] } }]
+            }
+          ]
         },
         {
           "name": "Create",
           "description": "Simulated product creation without persistence assumptions.",
-          "item": []
+          "item": [
+            {
+              "name": "PROD-004 Simulate creation with valid product data",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }, { "key": "Accept", "value": "application/json", "type": "text" }],
+                "body": { "mode": "raw", "raw": "{\n  \"title\": \"{{testProductTitle}}\",\n  \"price\": {{testProductPrice}},\n  \"description\": \"{{testProductDescription}}\",\n  \"category\": \"{{testProductCategory}}\"\n}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{baseUrl}}/products/add", "host": ["{{baseUrl}}"], "path": ["products", "add"] },
+                "description": "Simulates creation only. DummyJSON explicitly does not persist the returned product, so no follow-up GET or lifecycle dependency uses its generated ID."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+                  "const runId = Date.now() + '-' + Math.floor(Math.random() * 1000000);",
+                  "pm.collectionVariables.set('runId', runId);",
+                  "pm.collectionVariables.set('testProductTitle', 'QA Product ' + runId);",
+                  "pm.collectionVariables.set('testProductPrice', 49.95);",
+                  "pm.variables.set('testProductDescription', 'Automated simulated product ' + runId);",
+                  "pm.variables.set('testProductCategory', 'quality-assessment');"
+                ] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let createBody;",
+                  "pm.test('Documented simulated creation returns observed status 201 and JSON', function () { pm.response.to.have.status(201); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { createBody = pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Simulated creation returns a new positive ID', function () { pm.expect(createBody.id).to.be.a('number').and.above(0); });",
+                  "pm.test('Simulated creation reflects every submitted value', function () { pm.expect(createBody.title).to.eql(pm.collectionVariables.get('testProductTitle')); pm.expect(createBody.price).to.eql(Number(pm.collectionVariables.get('testProductPrice'))); pm.expect(createBody.description).to.eql(pm.variables.get('testProductDescription')); pm.expect(createBody.category).to.eql(pm.variables.get('testProductCategory')); });",
+                  "pm.test('Creation assertion is limited to the documented non-persistent simulation', function () { pm.expect(createBody.id).to.be.a('number').and.above(0); pm.expect(pm.request.url.toString()).to.include('/products/add'); });"
+                ] } }
+              ]
+            },
+            {
+              "name": "PROD-005 Simulate creation with minimal payload",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }, { "key": "Accept", "value": "application/json", "type": "text" }],
+                "body": { "mode": "raw", "raw": "{\n  \"title\": \"{{minimalProductTitle}}\"\n}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{baseUrl}}/products/add", "host": ["{{baseUrl}}"], "path": ["products", "add"] },
+                "description": "Uses the title-only payload shown by the official documentation. Creation is simulated and the returned ID is not reused as a persistent resource."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.variables.set('minimalProductTitle', 'QA Minimal Product ' + Date.now() + '-' + Math.floor(Math.random() * 1000000));"] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let minimalCreateBody;",
+                  "pm.test('Title-only simulated creation returns observed status 201 and JSON', function () { pm.response.to.have.status(201); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { minimalCreateBody = pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Title-only simulated creation returns a positive ID and matching title', function () { pm.expect(minimalCreateBody.id).to.be.a('number').and.above(0); pm.expect(minimalCreateBody.title).to.eql(pm.variables.get('minimalProductTitle')); });"
+                ] } }
+              ]
+            }
+          ]
         },
         {
           "name": "Update",
           "description": "Simulated PUT and PATCH operations without persistence assumptions.",
-          "item": []
+          "item": [
+            {
+              "name": "PROD-006 Simulate full update with PUT",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }, { "key": "Accept", "value": "application/json", "type": "text" }],
+                "body": { "mode": "raw", "raw": "{\n  \"title\": \"{{putTitle}}\",\n  \"price\": {{putPrice}},\n  \"description\": \"{{putDescription}}\",\n  \"category\": \"{{putCategory}}\"\n}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{baseUrl}}/products/{{existingProductId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{existingProductId}}"] },
+                "description": "Simulates a PUT against the existing ID discovered by PROD-001. The returned changes are validated, but no GET is used to claim persistence."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+                  "if (!pm.collectionVariables.get('existingProductId')) { throw new Error('PROD-001 must provide existingProductId before PROD-006'); }",
+                  "const suffix = Date.now() + '-' + Math.floor(Math.random() * 1000000);",
+                  "pm.variables.set('putTitle', 'QA PUT Product ' + suffix);",
+                  "pm.variables.set('putPrice', 61.25);",
+                  "pm.variables.set('putDescription', 'Simulated PUT update ' + suffix);",
+                  "pm.variables.set('putCategory', 'quality-assessment');"
+                ] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let putBody;",
+                  "pm.test('Documented simulated PUT returns observed status 200 and JSON', function () { pm.response.to.have.status(200); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { putBody = pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Simulated PUT targets the runtime-discovered existing product', function () { pm.expect(putBody.id).to.eql(Number(pm.collectionVariables.get('existingProductId'))); });",
+                  "pm.test('Simulated PUT reflects all submitted modifications', function () { pm.expect(putBody.title).to.eql(pm.variables.get('putTitle')); pm.expect(putBody.price).to.eql(Number(pm.variables.get('putPrice'))); pm.expect(putBody.description).to.eql(pm.variables.get('putDescription')); pm.expect(putBody.category).to.eql(pm.variables.get('putCategory')); });",
+                  "pm.test('PUT is asserted as a non-persistent simulation only', function () { pm.expect(pm.request.method).to.eql('PUT'); pm.expect(putBody.id).to.be.a('number').and.above(0); });"
+                ] } }
+              ]
+            },
+            {
+              "name": "PROD-007 Simulate partial update with PATCH",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }, { "key": "Accept", "value": "application/json", "type": "text" }],
+                "body": { "mode": "raw", "raw": "{\n  \"title\": \"{{patchTitle}}\"\n}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{baseUrl}}/products/{{existingProductId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{existingProductId}}"] },
+                "description": "Simulates a partial PATCH of only title on the PROD-001 existing ID. It validates the returned patch without claiming persistence."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["if (!pm.collectionVariables.get('existingProductId')) { throw new Error('PROD-001 must provide existingProductId before PROD-007'); }", "pm.variables.set('patchTitle', 'QA PATCH Product ' + Date.now() + '-' + Math.floor(Math.random() * 1000000));"] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let patchBody;",
+                  "pm.test('Documented simulated PATCH returns observed status 200 and JSON', function () { pm.response.to.have.status(200); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { patchBody = pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Simulated PATCH targets the runtime-discovered existing product', function () { pm.expect(patchBody.id).to.eql(Number(pm.collectionVariables.get('existingProductId'))); });",
+                  "pm.test('Simulated PATCH reflects the submitted partial modification', function () { pm.expect(patchBody.title).to.eql(pm.variables.get('patchTitle')); pm.expect(pm.request.method).to.eql('PATCH'); });"
+                ] } }
+              ]
+            },
+            {
+              "name": "PROD-009 Update nonexistent product",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }, { "key": "Accept", "value": "application/json", "type": "text" }],
+                "body": { "mode": "raw", "raw": "{\n  \"title\": \"{{missingUpdateTitle}}\"\n}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{baseUrl}}/products/{{nonexistentProductId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{nonexistentProductId}}"] },
+                "description": "Observed characterization from OBS-2026-07-31-012. The documentation does not specify updating a nonexistent product."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.variables.set('missingUpdateTitle', 'QA Missing PUT ' + Date.now() + '-' + Math.floor(Math.random() * 1000000));"] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let errorBody;",
+                  "pm.test('Characterization: nonexistent product update returns observed status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Characterization: nonexistent update response is JSON', function () { pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { errorBody = pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Characterization: update error identifies the requested product as not found', function () { pm.expect(errorBody.message).to.be.a('string').and.match(/product/i).and.match(/not found/i); pm.expect(errorBody.message).to.include(pm.collectionVariables.get('nonexistentProductId')); pm.expect(errorBody).not.to.have.property('id'); });"
+                ] } }
+              ]
+            }
+          ]
         },
         {
           "name": "Delete",
           "description": "Simulated deletion and deletion-metadata validation without persistence assumptions.",
-          "item": []
+          "item": [
+            {
+              "name": "PROD-008 Simulate deletion",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products/{{existingProductId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{existingProductId}}"] },
+                "description": "Simulates deletion of the PROD-001 existing ID. DummyJSON explicitly does not remove it, so the suite validates returned deletion metadata without a persistence GET."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["if (!pm.collectionVariables.get('existingProductId')) { throw new Error('PROD-001 must provide existingProductId before PROD-008'); }"] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let deleteBody;",
+                  "pm.test('Documented simulated DELETE returns observed status 200 and JSON', function () { pm.response.to.have.status(200); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { deleteBody = pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Simulated DELETE returns the runtime-discovered product ID', function () { pm.expect(deleteBody.id).to.eql(Number(pm.collectionVariables.get('existingProductId'))); });",
+                  "pm.test('Simulated DELETE reports deletion metadata', function () { pm.expect(deleteBody.isDeleted).to.eql(true); pm.expect(deleteBody.deletedOn).to.be.a('string').and.match(/^\\d{4}-\\d{2}-\\d{2}T/); pm.expect(Number.isNaN(Date.parse(deleteBody.deletedOn))).to.be.false; });",
+                  "pm.test('DELETE is asserted as a non-persistent simulation only', function () { pm.expect(pm.request.method).to.eql('DELETE'); pm.expect(deleteBody.isDeleted).to.be.true; });"
+                ] } }
+              ]
+            },
+            {
+              "name": "PROD-010 Delete nonexistent product",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products/{{nonexistentProductId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{nonexistentProductId}}"] },
+                "description": "Observed characterization from OBS-2026-07-31-014. The documentation does not specify deleting a nonexistent product."
+              },
+              "response": [],
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "let errorBody;",
+                "pm.test('Characterization: nonexistent product delete returns observed status 404', function () { pm.response.to.have.status(404); });",
+                "pm.test('Characterization: nonexistent delete response is JSON', function () { pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { errorBody = pm.response.json(); }).not.to.throw(); });",
+                "pm.test('Characterization: delete error identifies the requested product as not found', function () { pm.expect(errorBody.message).to.be.a('string').and.match(/product/i).and.match(/not found/i); pm.expect(errorBody.message).to.include(pm.collectionVariables.get('nonexistentProductId')); pm.expect(errorBody).not.to.have.property('id'); });"
+              ] } }]
+            }
+          ]
         }
       ]
     },
@@ -440,17 +653,191 @@
         {
           "name": "Search",
           "description": "Search response contracts and separately baselined matching characterization.",
-          "item": []
+          "item": [
+            {
+              "name": "QUERY-001 Search returns relevant products",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products/search?q={{searchQuery}}", "host": ["{{baseUrl}}"], "path": ["products", "search"], "query": [{ "key": "q", "value": "{{searchQuery}}" }] },
+                "description": "Validates the documented search envelope. Matching fields are a narrow characterization from OBS-2026-07-31-015; the test requires at least one reasonable field match somewhere, not a match in every field or result."
+              },
+              "response": [],
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "let searchBody;",
+                "pm.test('Search request succeeds with status 200 and JSON', function () { pm.response.to.have.status(200); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { searchBody = pm.response.json(); }).not.to.throw(); });",
+                "pm.test('Search response has a coherent non-empty product envelope', function () { pm.expect(searchBody.products).to.be.an('array').that.is.not.empty; pm.expect(searchBody.total).to.be.a('number').and.at.least(searchBody.products.length); pm.expect(searchBody.skip).to.be.a('number').and.at.least(0); pm.expect(searchBody.limit).to.be.a('number').and.at.least(searchBody.products.length); });",
+                "pm.test('Characterization: at least one reasonable searchable field corresponds to the query', function () { const query=String(pm.collectionVariables.get('searchQuery')).toLowerCase(); pm.expect(query).not.to.be.empty; const hasMatch=searchBody.products.some(function (product) { const values=[product.title,product.description,product.category,product.brand].concat(Array.isArray(product.tags)?product.tags:[]); return values.some(function (value) { return typeof value==='string' && value.toLowerCase().includes(query); }); }); pm.expect(hasMatch).to.be.true; });",
+                "pm.test('Search does not rely on an exact mutable result count', function () { pm.expect(searchBody.products.length).to.be.above(0); pm.expect(searchBody.total).to.be.at.least(searchBody.products.length); });"
+              ] } }]
+            },
+            {
+              "name": "QUERY-002 Search returns an empty result for a unique query",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products/search?q={{uniqueSearchQuery}}", "host": ["{{baseUrl}}"], "path": ["products", "search"], "query": [{ "key": "q", "value": "{{uniqueSearchQuery}}" }] },
+                "description": "Observed characterization from OBS-2026-07-31-016 using a fresh unlikely query each run. The documentation does not guarantee no-result metadata."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["const suffix=Date.now()+'-'+Math.floor(Math.random()*1000000); pm.collectionVariables.set('runId',suffix); pm.variables.set('uniqueSearchQuery','qa-no-result-'+suffix+'-zxqv');"] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let emptySearchBody;",
+                  "pm.test('Characterization: unique no-result search returns observed status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Characterization: no-result search response is JSON', function () { pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { emptySearchBody=pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Characterization: unique search returns an empty zero-result envelope', function () { pm.expect(emptySearchBody.products).to.be.an('array').that.is.empty; pm.expect(emptySearchBody.total).to.eql(0); if (Object.prototype.hasOwnProperty.call(emptySearchBody,'skip')) pm.expect(emptySearchBody.skip).to.eql(0); if (Object.prototype.hasOwnProperty.call(emptySearchBody,'limit')) pm.expect(emptySearchBody.limit).to.eql(0); });"
+                ] } }
+              ]
+            }
+          ]
         },
         {
           "name": "Categories",
           "description": "Dynamic category discovery and category-filtered product checks.",
-          "item": []
+          "item": [
+            {
+              "name": "QUERY-003 Get category list and store a valid category",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products/category-list", "host": ["{{baseUrl}}"], "path": ["products", "category-list"] },
+                "description": "Retrieves the documented category slug list and stores one validated runtime slug without hardcoding a catalog category."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.unset('validCategory');"] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let categoryList;",
+                  "pm.test('Category list succeeds with status 200 and JSON', function () { pm.response.to.have.status(200); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { categoryList=pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Category list is a non-empty array of non-empty strings', function () { pm.expect(categoryList).to.be.an('array').that.is.not.empty; categoryList.forEach(function (slug) { pm.expect(slug).to.be.a('string').and.not.empty; }); });",
+                  "pm.test('Validated category slug is stored for filtering', function () { pm.expect(pm.response.code).to.eql(200); pm.expect(categoryList).to.be.an('array').that.is.not.empty; categoryList.forEach(function (slug) { pm.expect(slug).to.be.a('string').and.not.empty; }); pm.collectionVariables.set('validCategory',categoryList[0]); });"
+                ] } }
+              ]
+            },
+            {
+              "name": "QUERY-004 Filter products by valid category",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products/category/{{validCategory}}", "host": ["{{baseUrl}}"], "path": ["products", "category", "{{validCategory}}"] },
+                "description": "Filters with the runtime slug from QUERY-003 and validates category membership plus relational metadata without fixed counts."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["if (!pm.collectionVariables.get('validCategory')) { throw new Error('QUERY-003 must provide validCategory before QUERY-004'); }"] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let categoryBody;",
+                  "pm.test('Valid category filter succeeds with status 200 and JSON', function () { pm.response.to.have.status(200); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { categoryBody=pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Valid category filter returns a non-empty products array', function () { pm.expect(categoryBody.products).to.be.an('array').that.is.not.empty; });",
+                  "pm.test('Every returned product belongs to the runtime category', function () { const expected=pm.collectionVariables.get('validCategory'); categoryBody.products.forEach(function (product) { pm.expect(product.category).to.eql(expected); }); });",
+                  "pm.test('Category pagination metadata is internally consistent', function () { pm.expect(categoryBody.total).to.be.a('number').and.at.least(categoryBody.products.length); pm.expect(categoryBody.skip).to.be.a('number').and.at.least(0); pm.expect(categoryBody.limit).to.be.a('number').and.at.least(categoryBody.products.length); });"
+                ] } }
+              ]
+            },
+            {
+              "name": "QUERY-005 Handle nonexistent category",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products/category/{{nonexistentCategory}}", "host": ["{{baseUrl}}"], "path": ["products", "category", "{{nonexistentCategory}}"] },
+                "description": "Observed characterization from OBS-2026-07-31-019 using a fresh unlikely slug; nonexistent-category behavior is undocumented."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.variables.set('nonexistentCategory','qa-category-'+Date.now()+'-'+Math.floor(Math.random()*1000000)+'-zxqv');"] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let missingCategoryBody;",
+                  "pm.test('Characterization: nonexistent category returns observed status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Characterization: nonexistent category response is JSON', function () { pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { missingCategoryBody=pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Characterization: nonexistent category returns an empty zero-result envelope', function () { pm.expect(missingCategoryBody.products).to.be.an('array').that.is.empty; pm.expect(missingCategoryBody.total).to.eql(0); pm.expect(missingCategoryBody.skip).to.eql(0); pm.expect(missingCategoryBody.limit).to.eql(0); });"
+                ] } }
+              ]
+            }
+          ]
         },
         {
           "name": "Pagination",
           "description": "Pagination, page comparison, field selection, and limit-zero behavior.",
-          "item": []
+          "item": [
+            {
+              "name": "QUERY-006 Retrieve first page and store product IDs",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products?limit={{pageLimit}}&skip=0", "host": ["{{baseUrl}}"], "path": ["products"], "query": [{ "key": "limit", "value": "{{pageLimit}}" }, { "key": "skip", "value": "0" }] },
+                "description": "Retrieves the first configured page, validates relational metadata and unique positive IDs, then stores those IDs as JSON for QUERY-007."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.unset('pageOneIds'); const limit=Number(pm.collectionVariables.get('pageLimit')); if (!Number.isInteger(limit)||limit<=0) { throw new Error('pageLimit must be a positive integer'); }"] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let pageOneBody;",
+                  "const pageLimit=Number(pm.collectionVariables.get('pageLimit'));",
+                  "pm.test('First page succeeds with status 200 and JSON', function () { pm.response.to.have.status(200); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { pageOneBody=pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('First page has coherent requested metadata and bounded results', function () { pm.expect(pageOneBody.products).to.be.an('array').that.is.not.empty; pm.expect(pageOneBody.products.length).to.be.at.most(pageLimit); pm.expect(pageOneBody.total).to.be.a('number').and.at.least(pageOneBody.products.length); pm.expect(pageOneBody.skip).to.eql(0); pm.expect(pageOneBody.limit).to.eql(pageLimit); });",
+                  "pm.test('First-page product IDs are positive and unique', function () { const ids=pageOneBody.products.map(function (p) { pm.expect(p.id).to.be.a('number').and.above(0); return p.id; }); pm.expect(new Set(ids).size).to.eql(ids.length); });",
+                  "pm.test('Validated first-page IDs are stored as JSON', function () { const ids=pageOneBody.products.map(function (p) { return p.id; }); pm.expect(pm.response.code).to.eql(200); pm.expect(ids).not.to.be.empty; pm.expect(ids.length).to.be.at.most(pageLimit); pm.expect(new Set(ids).size).to.eql(ids.length); pm.collectionVariables.set('pageOneIds',JSON.stringify(ids)); });"
+                ] } }
+              ]
+            },
+            {
+              "name": "QUERY-007 Retrieve second page and verify no ID overlap",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products?limit={{pageLimit}}&skip={{pageLimit}}", "host": ["{{baseUrl}}"], "path": ["products"], "query": [{ "key": "limit", "value": "{{pageLimit}}" }, { "key": "skip", "value": "{{pageLimit}}" }] },
+                "description": "Compares the adjacent second page with QUERY-006. No-overlap is a relational check for the run, not a fixed ordering or catalog assertion."
+              },
+              "response": [],
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["if (!pm.collectionVariables.get('pageOneIds')) { throw new Error('QUERY-006 must provide pageOneIds before QUERY-007'); }"] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "let pageTwoBody;",
+                  "const pageLimit=Number(pm.collectionVariables.get('pageLimit'));",
+                  "let pageOneIds; try { pageOneIds=JSON.parse(pm.collectionVariables.get('pageOneIds')); } catch (error) { pageOneIds=null; }",
+                  "pm.test('Second page succeeds with status 200 and JSON', function () { pm.response.to.have.status(200); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { pageTwoBody=pm.response.json(); }).not.to.throw(); });",
+                  "pm.test('Second page metadata matches configured pagination', function () { pm.expect(pageTwoBody.products).to.be.an('array'); pm.expect(pageTwoBody.products.length).to.be.at.most(pageLimit); pm.expect(pageTwoBody.skip).to.eql(pageLimit); pm.expect(pageTwoBody.limit).to.eql(pageLimit); pm.expect(pageTwoBody.total).to.be.a('number').and.at.least(pageTwoBody.products.length); });",
+                  "pm.test('Second-page IDs are positive and unique within the page', function () { const ids=pageTwoBody.products.map(function (p) { pm.expect(p.id).to.be.a('number').and.above(0); return p.id; }); pm.expect(new Set(ids).size).to.eql(ids.length); });",
+                  "pm.test('Second-page IDs do not overlap the stored first page', function () { pm.expect(pageOneIds).to.be.an('array').that.is.not.empty; const secondIds=pageTwoBody.products.map(function (p) { return p.id; }); const overlap=secondIds.filter(function (id) { return pageOneIds.includes(id); }); pm.expect(overlap).to.be.empty; });"
+                ] } }
+              ]
+            },
+            {
+              "name": "QUERY-008 Select only requested product fields",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products?limit=5&select=title,price", "host": ["{{baseUrl}}"], "path": ["products"], "query": [{ "key": "limit", "value": "5" }, { "key": "select", "value": "title,price" }] },
+                "description": "Validates documented comma-separated projection only inside each product object. Envelope metadata is deliberately evaluated separately."
+              },
+              "response": [],
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "let projectionBody;",
+                "pm.test('Field-selection request succeeds with status 200 and JSON', function () { pm.response.to.have.status(200); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { projectionBody=pm.response.json(); }).not.to.throw(); });",
+                "pm.test('Field-selection response contains a bounded non-empty products array', function () { pm.expect(projectionBody.products).to.be.an('array').that.is.not.empty; pm.expect(projectionBody.products.length).to.be.at.most(5); });",
+                "pm.test('Each product contains only selected fields plus optional ID', function () { const allowed=['id','title','price']; projectionBody.products.forEach(function (product) { pm.expect(product).to.have.property('title').that.is.a('string'); pm.expect(product).to.have.property('price').that.is.a('number'); Object.keys(product).forEach(function (key) { pm.expect(allowed).to.include(key); }); if (Object.prototype.hasOwnProperty.call(product,'id')) pm.expect(product.id).to.be.a('number').and.above(0); }); });",
+                "pm.test('Projection metadata remains coherent outside product objects', function () { pm.expect(projectionBody.total).to.be.a('number').and.at.least(projectionBody.products.length); pm.expect(projectionBody.skip).to.eql(0); pm.expect(projectionBody.limit).to.eql(5); });"
+              ] } }]
+            },
+            {
+              "name": "QUERY-009 Retrieve all products with limit=0",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "url": { "raw": "{{baseUrl}}/products?limit=0", "host": ["{{baseUrl}}"], "path": ["products"], "query": [{ "key": "limit", "value": "0" }] },
+                "description": "Validates the documented limit-zero all-items behavior using response relationships only. No mutable global total is hardcoded."
+              },
+              "response": [],
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "let allProductsBody;",
+                "pm.test('Limit-zero request succeeds with status 200 and JSON', function () { pm.response.to.have.status(200); pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json'); pm.expect(function () { allProductsBody=pm.response.json(); }).not.to.throw(); });",
+                "pm.test('Documented limit-zero semantics return the complete response snapshot', function () { pm.expect(allProductsBody.products).to.be.an('array'); pm.expect(allProductsBody.total).to.be.a('number').and.at.least(0); pm.expect(allProductsBody.products.length).to.eql(allProductsBody.total); pm.expect(allProductsBody.skip).to.eql(0); });",
+                "pm.test('Observed limit-zero metadata represents the returned count', function () { pm.expect(allProductsBody.limit).to.be.a('number').and.eql(allProductsBody.products.length); });",
+                "pm.test('Limit-zero product IDs are positive and unique in the snapshot', function () { const ids=allProductsBody.products.map(function (p) { pm.expect(p.id).to.be.a('number').and.above(0); return p.id; }); pm.expect(new Set(ids).size).to.eql(ids.length); });"
+              ] } }]
+            }
+          ]
         }
       ]
     },

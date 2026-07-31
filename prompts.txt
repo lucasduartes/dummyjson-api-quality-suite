@@ -1017,3 +1017,375 @@ Remaining risks and consciously accepted trade-offs:
 - JWT decoded-object validation still permits an array header at the generic object check; downstream payload claim checks reduce impact, and this Medium finding remains accepted.
 - Negative status codes remain single-observation characterization baselines and may change with the mutable public API.
 - AUTH-002 and AUTH-003 intentionally depend on AUTH-001 within the Positive workflow; stale-state and alternate-cookie false positives are now controlled.
+
+## 2026-07-31T10:51:19.7465789-03:00
+
+Complete user prompt:
+
+Implement only the products CRUD scope from docs/test-matrix.md.
+
+First inspect:
+
+- PLAN.md
+- docs/test-strategy.md
+- docs/test-matrix.md
+- docs/api-observations.md
+- Current collection and environment
+
+Use the official DummyJSON products documentation.
+
+Important API limitation:
+
+- POST creation is simulated and not persisted.
+- PUT and PATCH updates are simulated and not persisted.
+- DELETE is simulated and does not remove the product.
+
+Do not create a fake POST -> GET -> PUT -> DELETE lifecycle using the created ID.
+
+Implement:
+
+Read:
+- PROD-001 List products and store an existing product ID
+- PROD-002 Get existing product by ID
+- PROD-003 Get nonexistent product by ID
+
+Create:
+- PROD-004 Simulate creation with valid product data
+- PROD-005 Simulate creation with minimal payload
+
+Update:
+- PROD-006 Simulate full update with PUT
+- PROD-007 Simulate partial update with PATCH
+- PROD-009 Update nonexistent product
+
+Delete:
+- PROD-008 Simulate deletion
+- PROD-010 Delete nonexistent product
+
+PROD-001:
+
+GET {{baseUrl}}/products?limit=5&skip=0
+
+Validate:
+
+- Documented success status.
+- JSON content type.
+- products is an array.
+- products length is greater than zero and no greater than requested limit.
+- total is a non-negative number.
+- skip equals zero.
+- limit corresponds to the request.
+- Each returned product has a positive numeric id.
+- Save the first returned product id as existingProductId.
+- Do not assert an exact total.
+
+PROD-002:
+
+GET {{baseUrl}}/products/{{existingProductId}}
+
+Validate:
+
+- Returned id equals existingProductId.
+- title, category, description, and price have appropriate types when present.
+- Do not hardcode the product title.
+
+PROD-004:
+
+POST {{baseUrl}}/products/add
+
+Use a request-level pre-request script to generate:
+
+- A unique title containing runId or current timestamp
+- A numeric price
+- A description
+- A category
+
+Validate:
+
+- The response reflects the submitted values.
+- A new positive id is returned.
+- Do not issue a subsequent GET expecting persistence.
+- Document the simulated nature in the request description and tests.
+
+PROD-005:
+
+Use the smallest payload reasonably supported by the documentation.
+
+PUT and PATCH:
+
+- Use existingProductId, not the simulated created ID.
+- Generate unique updated values.
+- Validate the returned modifications.
+- Distinguish PUT and PATCH in naming and descriptions.
+- Do not issue a GET expecting the mutation to persist.
+
+DELETE:
+
+- Use existingProductId.
+- Validate returned id.
+- Validate isDeleted is true.
+- Validate deletedOn is a parseable ISO timestamp when returned.
+- Do not issue a GET expecting deletion persistence.
+
+Nonexistent ID requests:
+
+- Use {{nonexistentProductId}}.
+- Explore behavior first.
+- Classify undocumented behavior as characterization.
+- Do not invent expected status codes.
+
+Avoid:
+
+- Exact catalog totals
+- Exact product names
+- Assumptions about product ordering beyond what is needed to store a valid ID
+- Assertions that only check status codes
+- Reusing simulated created IDs as real persistent resources
+
+Run:
+
+- npm run test:products
+- npm test
+
+Update docs/api-observations.md with actual simulated CRUD and nonexistent-ID observations.
+
+Finish with request count, assertion count, results, assumptions, and risks.
+
+Summary of work performed:
+Work in progress: inspected every required planning, observation, collection, environment, and repository artifact before implementation; appended this prompt afterward. Official documentation review, controlled product observations, implementation, and tests remain pending.
+
+Files changed:
+- prompts.txt (append only)
+
+Commands executed:
+- Ran PowerShell to obtain the timestamp, read all required artifacts, and inspect Git status.
+- Applied this append-only prompt entry.
+
+Validation performed:
+- Confirmed the products folders are currently empty, product runtime variables have safe initial values, and authentication changes are already present.
+
+Assumptions:
+- The public fixture catalog is mutable, so existingProductId must be derived from PROD-001 at runtime.
+
+Remaining risks:
+- Simulated CRUD response details and nonexistent-ID behavior have not yet been observed in this turn.
+
+Completion addendum:
+
+Summary of work performed:
+- Reviewed the official DummyJSON products documentation and ran controlled observations for nonexistent reads, full/minimal create, PUT, PATCH, nonexistent update, DELETE, and nonexistent delete.
+- Implemented exactly PROD-001 through PROD-010 in the existing Read, Create, Update, and Delete folders, excluding PROD-008 ordering only insofar as folder structure places Update before Delete.
+- Used a dynamically discovered existingProductId for read/update/delete operations and request-generated unique values for simulated mutations.
+- Kept simulated create IDs isolated: they are neither stored nor used by GET, PUT, PATCH, or DELETE.
+- Recorded eight dated product observations with documented-versus-observed classification.
+
+Files changed:
+- postman/DummyJSON-API-Quality-Suite.postman_collection.json
+- docs/api-observations.md
+- prompts.txt (append only; prior entries preserved)
+
+Commands executed:
+- Inspected all required planning, documentation, collection, environment, and Git artifacts.
+- Opened the official DummyJSON products documentation.
+- Ran sanitized controlled product setup and eight CRUD/nonexistent-ID exploratory calls.
+- Parsed and structurally reviewed the collection with Node.js.
+- Ran `npm.cmd run test:products`.
+- Ran `npm.cmd test`.
+- Ran final dependency, created-ID reuse, hardcoded-path, nonexistent-variable, token-default, leak, Git status/diff, and whitespace checks.
+- Used ripgrep to verify all total assertions are relational/type assertions rather than an exact catalog total.
+
+Validation performed:
+- Products folder: 10 requests, 35 assertions, 8 prerequest scripts, 0 failures.
+- Full suite: 20 requests, 75 assertions, 9 prerequest scripts, 0 failures.
+- Confirmed all ten required product IDs exist exactly once in their intended folders.
+- Confirmed all existing-resource paths use `{{existingProductId}}` and all nonexistent cases use `{{nonexistentProductId}}`.
+- Confirmed no created ID variable exists or is reused and no post-create persistence request exists.
+- Confirmed no exact total or product title is asserted and no `/products/1` implementation path is hardcoded.
+- Confirmed collection JSON parses, token defaults remain empty, no JWT-like value leaked, and `git diff --check` passes.
+
+Assumptions:
+- A title-only request is the smallest payload reasonably supported by the official create example.
+- Numeric statuses for simulated CRUD and nonexistent-ID behavior are observed baselines; simulation/non-persistence and returned mutation semantics are the documented contract.
+- Product child folders that consume existingProductId require PROD-001 or an explicitly supplied valid ID; the parent products run supplies it in order and missing prerequisites fail clearly.
+
+Remaining risks:
+- DummyJSON catalog contents, totals, and observed undocumented error statuses/messages may change.
+- The public API may have transient latency; one product-list request took 5.7 seconds, so no brittle response-time assertion was added.
+- `deletedOn` is asserted only as parseable ISO-like metadata, not as equal or near the client clock, because observed server timing can differ.
+- PUT is validated as an echoed multi-field simulation, not as a documented full-replacement semantic guarantee.
+
+## 2026-07-31T11:00:58.5695731-03:00
+
+Complete user prompt:
+
+Implement only the search, filtering, and pagination scope from docs/test-matrix.md.
+
+Implement:
+
+Search:
+- QUERY-001 Search returns relevant products
+- QUERY-002 Search returns an empty result for a unique query
+
+Categories:
+- QUERY-003 Get category list and store a valid category
+- QUERY-004 Filter products by valid category
+- QUERY-005 Handle nonexistent category
+
+Pagination:
+- QUERY-006 Retrieve first page and store product IDs
+- QUERY-007 Retrieve second page and verify no ID overlap
+- QUERY-008 Select only requested product fields
+- QUERY-009 Retrieve all products with limit=0
+
+QUERY-001:
+
+GET {{baseUrl}}/products/search?q={{searchQuery}}
+
+Requirements:
+
+- Use searchQuery = phone unless exploratory verification shows it is unsuitable.
+- Validate list metadata.
+- Validate products is an array.
+- Validate at least one result exists.
+- Validate at least one reasonable searchable field in at least one product corresponds to the query.
+- Do not require every returned field of every product to contain the query unless the documented search contract proves that behavior.
+- Do not assert an exact result count.
+
+QUERY-002:
+
+Generate a unique unlikely query, for example using runId.
+
+Validate:
+
+- Response is successful if that is observed behavior.
+- products is an empty array.
+- total represents no results when returned.
+- Treat undocumented semantics as characterization where appropriate.
+
+QUERY-003:
+
+GET {{baseUrl}}/products/category-list
+
+Validate:
+
+- Response is an array.
+- Array is non-empty.
+- Every entry is a non-empty string.
+- Save one returned category slug as validCategory.
+- Do not hardcode the category unless necessary.
+
+QUERY-004:
+
+GET {{baseUrl}}/products/category/{{validCategory}}
+
+Validate:
+
+- Products array exists.
+- Every returned product category equals validCategory.
+- Pagination metadata is internally consistent.
+- Do not assert exact result totals.
+
+QUERY-005:
+
+Use an unlikely nonexistent category.
+
+Explore the response first and classify it accurately.
+
+QUERY-006:
+
+GET {{baseUrl}}/products?limit={{pageLimit}}&skip=0
+
+Validate metadata and store the returned IDs as JSON in pageOneIds.
+
+QUERY-007:
+
+GET {{baseUrl}}/products?limit={{pageLimit}}&skip={{pageLimit}}
+
+Validate:
+
+- skip equals pageLimit.
+- Length is no greater than pageLimit.
+- IDs are unique within the page.
+- No page-two ID appears in pageOneIds.
+
+QUERY-008:
+
+GET {{baseUrl}}/products?limit=5&select=title,price
+
+Validate:
+
+- Each product includes only expected selected fields plus id if the API includes it.
+- Do not fail due to metadata fields outside the individual product object.
+- Do not rely on exact product values.
+
+QUERY-009:
+
+GET {{baseUrl}}/products?limit=0
+
+Validate documented limit=0 semantics without asserting the exact global total.
+
+Run:
+
+- npm run test:query
+- npm test
+
+Review for mutable-data dependencies and false positives.
+
+Update documentation with any newly observed category or pagination behavior.
+
+Summary of work performed:
+Work in progress: inspected the current matrix, strategy, observations, collection, environment, and Git state before implementation; appended this prompt afterward. Official source review, controlled query observations, implementation, and validation remain pending.
+
+Files changed:
+- prompts.txt (append only)
+
+Commands executed:
+- Ran PowerShell to obtain the timestamp, inspect all relevant artifacts, and read Git status.
+- Applied this append-only prompt entry.
+
+Validation performed:
+- Confirmed all three query subfolders are empty and required variables have harmless initial values.
+
+Assumptions:
+- Search relevance must be characterized narrowly because the official documentation names the endpoint but does not define searchable fields or ranking.
+
+Remaining risks:
+- Empty-search, nonexistent-category, projection, and limit-zero response details have not yet been observed in this turn.
+
+Completion update — 2026-07-31T11:06:07.2424634-03:00
+
+Summary of work performed:
+Implemented QUERY-001 through QUERY-009 in the existing Search, Categories, and Pagination folders. Added contract and characterization assertions, dynamic unique no-result inputs, runtime category discovery, adjacent-page ID comparison, projection checks, and limit=0 checks without fixed catalog totals. Recorded controlled observations from the public API and reviewed the implementation for mutable-data dependencies and false positives.
+
+Files changed:
+- postman/DummyJSON-API-Quality-Suite.postman_collection.json
+- docs/api-observations.md
+- prompts.txt (append only)
+
+Commands executed:
+- Read PLAN.md, docs/test-strategy.md, docs/test-matrix.md, docs/api-observations.md, the Postman collection, environment, and repository status.
+- Reviewed the official DummyJSON products documentation.
+- Executed controlled Node fetch observations for search, category, pagination, projection, and limit=0 behavior.
+- Parsed the collection and statically counted query IDs and assertions with Node.
+- Ran npm.cmd run test:query.
+- Ran npm.cmd test.
+- Ran Git status, diff check, and diff statistics using a command-scoped safe-directory setting.
+
+Validation performed:
+- Both Postman JSON files parse successfully.
+- Confirmed 9 unique query requests, QUERY-001 through QUERY-009, with 33 assertions.
+- Query Newman run passed: 9 requests, 33 assertions, 0 failures.
+- Complete Newman run passed: 29 requests, 108 assertions, 0 failures.
+- Confirmed no exact catalog total, category slug, product ID, or product value is asserted by the query tests.
+- Confirmed runtime page/category values are stored only after prerequisite validation and no token values were documented or logged.
+- Git diff whitespace check passed; only line-ending conversion warnings were reported.
+
+Assumptions:
+- The public fixture value searchQuery=phone remains suitable while at least one returned product has a case-insensitive match in a reasonable searchable field.
+- QUERY-004 and QUERY-007 intentionally depend on their immediately preceding discovery requests within the ordered query folder; missing prerequisites fail explicitly instead of producing false passes.
+- The response limit normalization for limit=0 is an observed characterization detail, while returning all products is documented behavior.
+
+Remaining risks:
+- DummyJSON is a mutable public service, so catalog membership, category ordering, availability, and latency can change between runs.
+- Search matching fields and empty-result metadata are undocumented characterization behavior and may change.
+- Adjacent-page no-overlap assumes a stable catalog snapshot across the two requests; concurrent upstream mutations could cause a transient failure.
