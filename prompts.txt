@@ -916,3 +916,104 @@ Remaining risks:
 - DummyJSON is public and mutable; undocumented negative statuses or messages may change.
 - The public fixture credentials or returned identity schema may change.
 - Authentication cookies are a second service auth channel; AUTH-007 explicitly neutralizes them, but future collection-level cookie behavior should remain under review.
+
+## 2026-07-31T10:43:22.7326106-03:00
+
+Complete user prompt:
+
+Review the authentication implementation as an independent senior API quality engineer.
+
+Do not modify files initially.
+
+Look specifically for:
+
+- False positives
+- Assertions that pass without validating the intended behavior
+- Hidden request-order dependencies
+- Token leakage
+- Secrets committed in initial or current variable values
+- Hardcoded user data beyond the public fixture
+- Weak negative tests
+- Assertions based only on HTTP status
+- Brittle JWT checks
+- Incorrect Base64URL decoding
+- Tests that confuse structural JWT validation with signature verification
+- Assumptions not supported by documentation
+- Negative cases incorrectly presented as contract tests
+- Runtime variables being updated before assertions pass
+
+For each finding provide:
+
+- Severity
+- Request name
+- Exact problem
+- Example incorrect response that could still pass
+- Recommended minimal correction
+
+After presenting the findings, apply only critical and high-severity corrections.
+
+Do not expand the authentication scope.
+
+Run:
+
+- npm run test:auth
+- npm test
+
+Update docs/api-observations.md only when the review discovers a genuinely new behavior.
+
+Report corrected findings and consciously accepted trade-offs.
+
+Summary of work performed:
+Work in progress: completed a read-only senior review before any modification and presented five high-severity and three medium-severity findings. No critical issue or committed secret/token leak was found. High-severity corrections and validation remain in progress.
+
+Files changed:
+- prompts.txt (append only, after the initial read-only review)
+
+Commands executed:
+- Ran PowerShell to obtain the timestamp and inspect the collection, environment, test matrix, test strategy, API observations, and Git status.
+- Applied this append-only prompt entry after presenting findings.
+
+Validation performed:
+- Reviewed false-positive paths, ordering, cookie fallback, variable persistence, JWT structure/decoding, negative oracles, documentation support, hardcoded data, and token leakage.
+
+Assumptions:
+- Findings rated Medium will be reported as accepted trade-offs and will not be patched under the user's critical/high-only instruction.
+
+Remaining risks:
+- High-severity corrections and required Newman runs remain pending.
+
+Completion addendum:
+
+Summary of work performed:
+- Applied only the five reported high-severity corrections; no critical findings existed and Medium findings were intentionally left unchanged.
+- Cleared stale session variables before AUTH-001, neutralized cookie authentication/fallback for AUTH-002, AUTH-003, AUTH-008, and AUTH-009, and strengthened AUTH-001/AUTH-003 persistence gates so required Content-Type and token prerequisites pass before values are written.
+- Kept AUTH-007's existing empty-cookie control.
+- Did not update docs/api-observations.md because the review discovered test-harness risks, not new service behavior.
+
+Files changed:
+- postman/DummyJSON-API-Quality-Suite.postman_collection.json
+- prompts.txt (append only; prior entries preserved)
+
+Commands executed:
+- Ran static Node.js checks before and after corrections.
+- Ran `npm.cmd run test:auth` with approved public-API access.
+- Ran `npm.cmd test` with approved public-API access.
+- Ran final JSON, token-mutation, token-default, environment-token, token-leak, cookie-neutralization, stale-state, Git status/diff, and whitespace checks.
+
+Validation performed:
+- Authentication run: 9 requests, 35 assertions, 1 prerequest script, 0 failures.
+- Full run: 10 requests, 40 assertions, 1 prerequest script, 0 failures.
+- Confirmed all intended token-auth requests neutralize cookies and AUTH-001 clears three session variables before login.
+- Confirmed negative tests do not mutate valid tokens.
+- Confirmed accessToken and refreshToken committed values remain empty and the environment contains no token keys.
+- Confirmed no JWT-like value exists in reviewed committed/logged artifacts.
+- Confirmed JSON parsing and `git diff --check` pass.
+
+Assumptions:
+- Empty Cookie header values are the minimal portable control for Newman's cookie jar against DummyJSON and were verified by live passing runs.
+
+Remaining risks and consciously accepted trade-offs:
+- Numeric 200 assertions retain names that overstate explicit documentation support; this Medium finding was not patched under the critical/high-only instruction.
+- JWT decoded-object validation still permits an array header at the generic object check; downstream payload claim checks reduce impact, and this Medium finding remains accepted.
+- Negative status codes remain single-observation characterization baselines and may change with the mutable public API.
+- AUTH-002 and AUTH-003 intentionally depend on AUTH-001 within the Positive workflow; stale-state and alternate-cookie false positives are now controlled.

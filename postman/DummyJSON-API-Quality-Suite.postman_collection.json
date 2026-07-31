@@ -98,6 +98,17 @@
               "response": [],
               "event": [
                 {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.unset('accessToken');",
+                      "pm.collectionVariables.unset('refreshToken');",
+                      "pm.collectionVariables.unset('authenticatedUserId');"
+                    ]
+                  }
+                },
+                {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
@@ -166,6 +177,7 @@
                       "});",
                       "pm.test('Validated login session is saved to collection variables', function () {",
                       "    pm.expect(pm.response.code).to.eql(200);",
+                      "    pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json');",
                       "    pm.expect(loginBody.id).to.be.a('number').and.above(0);",
                       "    pm.expect(loginBody.username).to.eql(pm.environment.get('username'));",
                       "    pm.expect(loginBody.email).to.be.a('string').and.not.empty;",
@@ -185,7 +197,10 @@
               "name": "AUTH-002 Current user matches authenticated identity",
               "request": {
                 "method": "GET",
-                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "header": [
+                  { "key": "Accept", "value": "application/json", "type": "text" },
+                  { "key": "Cookie", "value": "accessToken=; refreshToken=", "type": "text", "description": "Neutralizes cookie authentication so this request validates the Bearer access token exclusively." }
+                ],
                 "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
                 "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] },
                 "description": "Uses the validated runtime access token and verifies that the documented current-user identity matches the login response."
@@ -224,7 +239,8 @@
                 "method": "POST",
                 "header": [
                   { "key": "Content-Type", "value": "application/json", "type": "text" },
-                  { "key": "Accept", "value": "application/json", "type": "text" }
+                  { "key": "Accept", "value": "application/json", "type": "text" },
+                  { "key": "Cookie", "value": "accessToken=; refreshToken=", "type": "text", "description": "Neutralizes documented cookie fallback so the JSON refresh token is the only refresh credential." }
                 ],
                 "body": {
                   "mode": "raw",
@@ -257,6 +273,9 @@
                     "});",
                     "pm.test('Validated refreshed tokens replace collection runtime values', function () {",
                     "    pm.expect(pm.response.code).to.eql(200);",
+                    "    pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/json');",
+                    "    pm.expect(refreshBody.accessToken).to.be.a('string').and.not.empty;",
+                    "    pm.expect(refreshBody.refreshToken).to.be.a('string').and.not.empty;",
                     "    pm.expect(isThreePartJwt(refreshBody.accessToken)).to.be.true;",
                     "    pm.expect(isThreePartJwt(refreshBody.refreshToken)).to.be.true;",
                     "    pm.collectionVariables.set('accessToken', refreshBody.accessToken);",
@@ -347,7 +366,10 @@
               "name": "AUTH-008 Protected endpoint handles malformed bearer token",
               "request": {
                 "method": "GET",
-                "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+                "header": [
+                  { "key": "Accept", "value": "application/json", "type": "text" },
+                  { "key": "Cookie", "value": "accessToken=; refreshToken=", "type": "text", "description": "Neutralizes cookie authentication so only the malformed Bearer value is exercised." }
+                ],
                 "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "malformed-auth-008", "type": "string" }] },
                 "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] },
                 "description": "Characterization based on OBS-2026-07-31-005. Uses a request-local malformed Bearer value and never reads or overwrites valid runtime tokens."
@@ -364,7 +386,11 @@
               "name": "AUTH-009 Refresh handles invalid refresh token",
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }, { "key": "Accept", "value": "application/json", "type": "text" }],
+                "header": [
+                  { "key": "Content-Type", "value": "application/json", "type": "text" },
+                  { "key": "Accept", "value": "application/json", "type": "text" },
+                  { "key": "Cookie", "value": "accessToken=; refreshToken=", "type": "text", "description": "Neutralizes cookie fallback so only the request-local invalid refresh value is exercised." }
+                ],
                 "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"invalid-refresh-auth-009\",\n  \"expiresInMins\": 30\n}", "options": { "raw": { "language": "json" } } },
                 "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] },
                 "description": "Characterization based on OBS-2026-07-31-006. Uses a request-local invalid refresh value and does not overwrite valid collection tokens."
