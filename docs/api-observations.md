@@ -280,6 +280,86 @@ All catalog-dependent values below are described relationally. Exact counts, IDs
 - Documentation status: `limit=0` returning all items is documented; returned metadata normalization is observed.
 - Classification: Documented contract plus observed metadata behavior.
 
+## Error-handling observations
+
+All outcomes below are undocumented by the official products documentation. Conventional REST expectations were used only to select experiments; assertions are based on these live results. Each case was observed once.
+
+### OBS-2026-07-31-023 — ERR-001 non-numeric product ID
+
+- Timestamp: `2026-07-31T14:12:00.980Z`
+- Request: `GET /products/not-a-number`.
+- Response status: `404`; Content-Type: `application/json; charset=utf-8`.
+- Relevant response body: `{ "message": "Product with id 'not-a-number' not found" }`
+- Documentation status: Single-product reads are documented; non-numeric identifier handling is not.
+- Classification: Experimentally observed characterization; documentation gap.
+
+### OBS-2026-07-31-024 — ERR-002 negative product ID
+
+- Timestamp: `2026-07-31T14:12:01.796Z`
+- Request: `GET /products/-1`.
+- Response status: `404`; Content-Type: `application/json; charset=utf-8`.
+- Relevant response body: `{ "message": "Product with id '-1' not found" }`
+- Documentation status: Negative identifier handling is not documented.
+- Classification: Experimentally observed characterization; documentation gap.
+
+### OBS-2026-07-31-025 — ERR-003 malformed JSON
+
+- Timestamp: `2026-07-31T14:12:01.981Z`
+- Request: `POST /products/add`; Content-Type `application/json`; truncated raw body `{"title": "broken"`.
+- Response status: `400`; Content-Type: `application/json; charset=utf-8`.
+- Relevant response body: a non-empty `message` describing the JSON parser position and expected delimiter.
+- Documentation status: Simulated valid creation is documented; malformed-body handling is not.
+- Classification: Experimentally observed characterization; documentation gap. The parser error is not currently treated as an API defect.
+
+### OBS-2026-07-31-026 — ERR-004 unexpected product field types
+
+- Timestamp: `2026-07-31T14:12:02.193Z`
+- Request: `POST /products/add`; controlled JSON body with numeric `title` and string `price`.
+- Response status: `201`; Content-Type: `application/json; charset=utf-8`.
+- Relevant response body: positive generated `id`, numeric `title` echoed unchanged, and string `price` echoed unchanged.
+- Documentation status: Simulated creation and field echo are documented for normal example data; validation rules and wrong-type behavior are not.
+- Classification: Experimentally observed characterization; permissive validation and expected simulated behavior/API limitation. This is not represented as rejection.
+
+### OBS-2026-07-31-027 — ERR-005 empty create object
+
+- Timestamp: `2026-07-31T14:12:02.379Z`
+- Request: `POST /products/add`; JSON body `{}`.
+- Response status: `201`; Content-Type: `application/json; charset=utf-8`.
+- Relevant response body: an object containing only a positive generated `id`.
+- Documentation status: No minimum create payload or empty-body validation behavior is documented.
+- Classification: Experimentally observed characterization; permissive validation and expected simulated behavior/API limitation.
+
+### OBS-2026-07-31-028 — ERR-006 negative pagination values
+
+- Timestamp: `2026-07-31T14:12:02.572Z`
+- Request: `GET /products?limit=-5&skip=-5`.
+- Response status: `400`; Content-Type: `application/json; charset=utf-8`.
+- Relevant response body: `{ "message": "Invalid 'limit' - should be a positive number" }`
+- Documentation status: Positive pagination and `limit=0` are documented; negative parameter handling is not. Because limit failed first, this observation does not independently establish negative-skip behavior.
+- Classification: Experimentally observed characterization; documentation gap.
+
+### OBS-2026-07-31-029 — ERR-007 unsupported product-resource POST
+
+- Timestamp: `2026-07-31T14:12:02.757Z`
+- Request: `POST /products/1`; JSON body `{}`.
+- Response status: `404`; Content-Type: `text/html; charset=utf-8`; no `Allow` header.
+- Relevant response body: HTML error text identifying `Cannot POST /products/1`.
+- Documentation status: GET, PUT/PATCH, and DELETE are documented for a product resource; POST is documented only for `/products/add`. Unsupported-method behavior is not documented.
+- Classification: Experimentally observed characterization; documentation gap. A conventional `405 Method Not Allowed` expectation is explicitly not used as an assertion.
+
+## Unexpected-behavior classification
+
+| Observation | Classification | Rationale |
+|---|---|---|
+| Invalid IDs return JSON 404 | Documentation gap | Sensible observed behavior, but the official contract does not specify it |
+| Malformed JSON returns a parser-oriented JSON 400 | Documentation gap | Useful behavior with undocumented status/body; exposing parser details could merit separate product review but is not labeled a defect here |
+| Wrong product field types are accepted and echoed | Permissive validation; expected simulated behavior | DummyJSON simulates writes and documents no product schema enforcement |
+| Empty product object is accepted | Permissive validation; expected simulated behavior | The simulator returns a generated ID without defining required fields |
+| Negative pagination reports invalid limit | Documentation gap | Negative-input semantics and validation order are undocumented |
+| Unsupported product POST returns HTML 404 without `Allow` | Documentation gap; potential API defect | It is testable and internally consistent with route handling, but an API consumer might reasonably prefer structured JSON and method-oriented signaling |
+| No implementation/test mismatch observed | No test defect found | Assertions encode the observed behavior and label their oracle accurately |
+| No transport variance observed in the controlled probes | No environmental instability observed | Public-service/network instability remains an execution risk, not an observed outcome in this run |
+
 ## Mutable-public-API risks
 
 - Product totals, IDs, fields, titles, categories, and search matches can change.

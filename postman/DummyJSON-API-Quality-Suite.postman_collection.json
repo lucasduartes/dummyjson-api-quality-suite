@@ -844,7 +844,202 @@
     {
       "name": "04 - Error Handling",
       "description": "Undocumented malformed-input and unsupported-operation behavior, implemented only after exploratory characterization.",
-      "item": []
+      "item": [
+        {
+          "name": "ERR-001 Non-numeric product ID is reported as not found",
+          "description": "Characterization test. The official products documentation does not define non-numeric identifier behavior. A conventional REST expectation motivated exploration; the assertions encode the observed JSON 404 response and do not label it as contract behavior.",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/products/not-a-number"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Characterization: non-numeric product ID returns observed status 404 and JSON', function () {",
+              "  pm.response.to.have.status(404);",
+              "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+              "  pm.expect(function () { pm.response.json(); }).not.to.throw();",
+              "});",
+              "pm.test('Characterization: error identifies the non-numeric product ID as not found', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.be.an('object');",
+              "  pm.expect(body.message).to.be.a('string').and.to.include('not-a-number').and.to.match(/not found/i);",
+              "  pm.expect(body).not.to.have.property('id');",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "ERR-002 Negative product ID is reported as not found",
+          "description": "Characterization test. Negative identifier handling is undocumented. The assertions encode the experimentally observed JSON 404 response rather than a conventional REST assumption.",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/products/-1"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Characterization: negative product ID returns observed status 404 and JSON', function () {",
+              "  pm.response.to.have.status(404);",
+              "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+              "  pm.expect(function () { pm.response.json(); }).not.to.throw();",
+              "});",
+              "pm.test('Characterization: error identifies the negative product ID as not found', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.be.an('object');",
+              "  pm.expect(body.message).to.be.a('string').and.to.include('-1').and.to.match(/not found/i);",
+              "  pm.expect(body).not.to.have.property('id');",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "ERR-003 Malformed JSON produces a parser error",
+          "description": "Characterization test. This request deliberately sends genuinely invalid raw JSON with application/json. Parser failure behavior is undocumented; assertions reflect the observed status and semantic error body.",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"title\": \"broken\"" },
+            "url": "{{baseUrl}}/products/add"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Characterization: malformed JSON returns observed status 400 and JSON', function () {",
+              "  pm.response.to.have.status(400);",
+              "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+              "  pm.expect(function () { pm.response.json(); }).not.to.throw();",
+              "});",
+              "pm.test('Characterization: malformed JSON response reports a parse failure', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.be.an('object');",
+              "  pm.expect(body.message).to.be.a('string').and.not.empty;",
+              "  pm.expect(body.message).to.match(/JSON|property|position|syntax|parse/i);",
+              "  pm.expect(body).not.to.have.property('id');",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "ERR-004 Unexpected product field types are echoed permissively",
+          "description": "Characterization test and API limitation observation. The simulated create endpoint experimentally accepts and echoes a numeric title and string price. This verifies permissive validation; it is not a rejection test or a documented contract.",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": 12345,\n  \"price\": \"not-a-number\"\n}" },
+            "url": "{{baseUrl}}/products/add"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Characterization: wrong-type create is accepted with observed status 201 and JSON', function () {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+              "  pm.expect(function () { pm.response.json(); }).not.to.throw();",
+              "});",
+              "pm.test('API limitation: simulated create preserves unexpected field types', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.id).to.be.a('number').and.above(0);",
+              "  pm.expect(body.title).to.eql(12345);",
+              "  pm.expect(body.price).to.eql('not-a-number');",
+              "  pm.expect(body.title).to.be.a('number');",
+              "  pm.expect(body.price).to.be.a('string');",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "ERR-005 Empty create body is accepted as a simulated product",
+          "description": "Characterization test and API limitation observation. The simulated endpoint experimentally accepts an empty JSON object and returns only a generated ID. No product validation minimum is documented, so this does not claim successful validation is correct contract behavior.",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/products/add"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Characterization: empty object create is accepted with observed status 201 and JSON', function () {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+              "  pm.expect(function () { pm.response.json(); }).not.to.throw();",
+              "});",
+              "pm.test('API limitation: empty create returns a generated ID without invented product fields', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.be.an('object');",
+              "  pm.expect(body.id).to.be.a('number').and.above(0);",
+              "  pm.expect(Object.keys(body)).to.have.members(['id']);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "ERR-006 Negative pagination values report invalid limit",
+          "description": "Characterization test. Negative limit and skip behavior is undocumented. The observed response reports the first invalid parameter, limit, as requiring a positive number; the test does not claim separate skip validation occurred.",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/products?limit=-5&skip=-5"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Characterization: negative pagination returns observed status 400 and JSON', function () {",
+              "  pm.response.to.have.status(400);",
+              "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+              "  pm.expect(function () { pm.response.json(); }).not.to.throw();",
+              "});",
+              "pm.test('Characterization: response identifies limit as requiring a positive value', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.be.an('object');",
+              "  pm.expect(body.message).to.be.a('string').and.to.match(/limit/i).and.to.match(/positive/i);",
+              "  pm.expect(body).not.to.have.property('products');",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "ERR-007 POST to a product resource is unsupported",
+          "description": "Characterization test. POST /products/1 is not among the documented product-resource methods and provides unique unsupported-method routing coverage. Exploration observed an HTML 404 with method and path semantics; this is not asserted as a conventional 405 contract and is not duplicated by existing CRUD tests.",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json, text/html" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/products/1"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Characterization: unsupported product POST returns observed status 404 and HTML', function () {",
+              "  pm.response.to.have.status(404);",
+              "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^text\\/html\\b/i);",
+              "  pm.expect(pm.response.text()).to.be.a('string').and.not.empty;",
+              "});",
+              "pm.test('Characterization: unsupported-route body identifies the method and product path', function () {",
+              "  const text = pm.response.text();",
+              "  pm.expect(text).to.match(/Cannot\\s+POST/i);",
+              "  pm.expect(text).to.include('/products/1');",
+              "  pm.expect(pm.response.headers.get('Allow')).to.eql(undefined);",
+              "});"
+            ] }
+          }]
+        }
+      ]
     }
   ],
   "variable": [
