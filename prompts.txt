@@ -1,0 +1,107 @@
+## 2026-07-31T09:38:50.9305900-03:00
+
+Complete user prompt:
+
+Create a CLAUDE.md file in the project root with the following instruction:
+
+# Project Rules
+
+## Prompt Logging
+
+Every time you receive a new instruction or prompt, append it to prompts.txt in the project root with a timestamp (ISO 8601) and a brief summary of what you did in response. Create the file if it doesn't exist. Keep this log updated throughout all sessions.
+
+Summary of work performed:
+Created CLAUDE.md in the project root with the requested text and verified its contents.
+
+Files changed:
+- CLAUDE.md (created)
+
+Commands executed:
+- Applied a patch to create CLAUDE.md.
+- Ran `Get-Content -Raw -LiteralPath .\CLAUDE.md` to read it back.
+
+Validation performed:
+- Confirmed CLAUDE.md exactly contains the requested headings and prompt-logging instruction.
+
+Assumptions:
+- The project root is `C:\Projetos\dummyjson-api-quality-suite`.
+
+Remaining risks:
+- This prompt was logged retrospectively when prompts.txt was requested by the second prompt; its timestamp is the machine time at logging, not the original receipt time.
+
+## 2026-07-31T09:38:50.9305900-03:00
+
+Complete user prompt:
+
+I am using OpenAI Codex rather than Claude Code.
+
+Keep CLAUDE.md unchanged because it is explicitly required by the assessment.
+
+Create an AGENTS.md file in the project root that mirrors and strengthens the prompt-logging requirement from CLAUDE.md.
+
+The AGENTS.md rules must include:
+
+# Repository Working Rules
+
+## Prompt Logging
+
+- For every instruction received, append an entry to prompts.txt.
+- Use the machine's current timestamp in ISO 8601 format, including timezone when available.
+- Include the complete user prompt.
+- Include a concise and accurate summary of the work performed.
+- Include files changed, commands executed, validation performed, assumptions, and remaining risks.
+- Never rewrite, reorder, backdate, or delete previous prompt entries.
+- Never include access tokens or secrets in prompts.txt.
+- Ensure the first and second prompts from this session are both represented in prompts.txt.
+
+## Engineering Workflow
+
+- Inspect the repository before modifying files.
+- Plan before implementing ambiguous or multi-step changes.
+- Use only the official DummyJSON documentation as the authoritative API contract.
+- Clearly distinguish documented contract behavior from experimentally observed behavior.
+- Treat undocumented edge cases as characterization tests.
+- Do not invent expected HTTP status codes based only on REST conventions.
+- Do not weaken a failing assertion merely to make a test pass.
+- Identify the root cause before changing a failing test.
+- Prefer small, reviewable implementation steps.
+- Run the relevant Newman folder after each meaningful implementation change.
+- Run the complete suite before considering the work complete.
+- Keep runtime tokens empty in committed files.
+- Never commit secrets, private credentials, generated reports, or node_modules.
+- Do not create Git commits unless I explicitly request it.
+- At the end of every response, report files changed, commands run, test results, assumptions, and remaining risks.
+
+Create prompts.txt if necessary and ensure both prompts received so far are logged accurately.
+
+Summary of work performed:
+Inspected the repository, preserved CLAUDE.md unchanged, created AGENTS.md with all requested repository rules, and created prompts.txt with append-only entries for both prompts received in this session.
+
+Files changed:
+- AGENTS.md (created)
+- prompts.txt (created)
+- CLAUDE.md (unchanged)
+
+Commands executed:
+- Ran a PowerShell inspection command using `Get-ChildItem`, `git status --short`, conditional `Get-Content`, and `Get-Date -Format o`.
+- Applied a patch to create AGENTS.md and prompts.txt.
+
+Validation performed:
+- Inspected the project root and confirmed CLAUDE.md existed before modification.
+- Confirmed neither AGENTS.md nor prompts.txt existed before creation.
+- Compared the created AGENTS.md content against every rule supplied in the prompt while applying the patch.
+
+Assumptions:
+- The timestamp records when both log entries were created; the first prompt is necessarily logged retrospectively.
+- No Newman run is relevant because this change only adds repository instruction and audit-log text files.
+
+Remaining risks:
+- `git status --short` could not run because Git reported dubious repository ownership; no global safe-directory configuration was changed without explicit authorization.
+- No test suite was run because no executable code or API tests changed.
+
+Final validation addendum:
+- Ran a read-only PowerShell check of AGENTS.md, prompts.txt, and CLAUDE.md.
+- Confirmed the required AGENTS.md title and both rule-section headings are present.
+- Confirmed prompts.txt contains exactly two session prompt entries.
+- Confirmed CLAUDE.md still has the required prompt-logging text and a length of 294 characters.
+- Appended this validation result to the existing second entry without rewriting earlier log content.
